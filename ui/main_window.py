@@ -52,6 +52,9 @@ class WorkerThread(QtCore.QThread):
             self.finished_signal.emit(False, str(e))
 
 
+APP_VERSION = "v0.6.0"
+
+
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
@@ -60,7 +63,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.current_gshift_mode = False
         self.current_model_key = "g502"
 
-        self.setWindowTitle("Logitech Onboard Memory Manager")
+        self.setWindowTitle(f"Logitech Onboard Memory Manager {APP_VERSION}")
         self.resize(1080, 720)
 
         icon_path = Path(__file__).resolve().parent.parent / "assets" / "icon.svg"
@@ -176,10 +179,25 @@ class MainWindow(QtWidgets.QMainWindow):
         # Header bar
         header_layout = QtWidgets.QHBoxLayout()
         title_box = QtWidgets.QVBoxLayout()
-        self.device_title = QtWidgets.QLabel("Logitech G502 X PLUS")
-        self.device_title.setStyleSheet("font-size: 20px; font-weight: bold; color: #ffffff;")
+        
+        app_title_row = QtWidgets.QHBoxLayout()
+        self.app_title_lbl = QtWidgets.QLabel("Logitech Onboard Memory Manager")
+        self.app_title_lbl.setStyleSheet("font-size: 16px; font-weight: bold; color: #ffffff;")
+        self.version_badge = QtWidgets.QLabel(f" {APP_VERSION} ")
+        self.version_badge.setStyleSheet(
+            "background-color: #2e3440; color: #8892b0; font-size: 12px; font-weight: bold; "
+            "border: 1px solid #434c5e; border-radius: 4px; padding: 1px 4px;"
+        )
+        app_title_row.addWidget(self.app_title_lbl)
+        app_title_row.addWidget(self.version_badge)
+        app_title_row.addStretch()
+
+        self.device_title = QtWidgets.QLabel("Detecting device...")
+        self.device_title.setStyleSheet("font-size: 13px; color: #60a5fa; font-weight: bold;")
         self.device_status = QtWidgets.QLabel("Status: Checking device...")
-        self.device_status.setStyleSheet("color: #9ca3af; font-size: 12px;")
+        self.device_status.setStyleSheet("color: #9ca3af; font-size: 11px;")
+        
+        title_box.addLayout(app_title_row)
         title_box.addWidget(self.device_title)
         title_box.addWidget(self.device_status)
         header_layout.addLayout(title_box)
