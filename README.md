@@ -4,6 +4,8 @@ A native Linux GUI application designed to inspect, edit, and write button assig
 
 No Windows installation, Logitech G HUB, Solaar, or background daemons required.
 
+![Logitech Onboard Memory Manager Screenshot](assets/screenshot.png)
+
 ---
 
 ## Features
