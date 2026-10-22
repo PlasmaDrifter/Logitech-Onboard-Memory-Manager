@@ -86,7 +86,7 @@ HID_KEYCODES = {
 
 HID_KEYCODES_INV = {v.upper(): k for k, v in HID_KEYCODES.items()}
 
-# Physical buttons on Logitech G502 X / G502 series
+# Physical buttons for various Logitech gaming mouse families
 G502_BUTTON_LABELS = {
     1: "Button 1: Left Click",
     2: "Button 2: Right Click",
@@ -100,3 +100,111 @@ G502_BUTTON_LABELS = {
     10: "Button 10: G7 (DPI Down / Index finger outer)",
     11: "Button 11: G8 (DPI Up / Index finger outer)",
 }
+
+GPRO_BUTTON_LABELS = {
+    1: "Button 1: Left Click",
+    2: "Button 2: Right Click",
+    3: "Button 3: Middle Click / Scroll Wheel Press",
+    4: "Button 4: Side Lower (Thumb Back)",
+    5: "Button 5: Side Upper (Thumb Forward)",
+}
+
+G305_BUTTON_LABELS = {
+    1: "Button 1: Left Click",
+    2: "Button 2: Right Click",
+    3: "Button 3: Middle Click / Scroll Wheel Press",
+    4: "Button 4: Side Lower (Thumb Back)",
+    5: "Button 5: Side Upper (Thumb Forward)",
+    6: "Button 6: DPI Cycle (Top Button)",
+}
+
+G703_BUTTON_LABELS = {
+    1: "Button 1: Left Click",
+    2: "Button 2: Right Click",
+    3: "Button 3: Middle Click / Scroll Wheel Press",
+    4: "Button 4: Side Lower (Thumb Back)",
+    5: "Button 5: Side Upper (Thumb Forward)",
+    6: "Button 6: DPI Cycle (Top Button)",
+}
+
+G903_BUTTON_LABELS = {
+    1: "Button 1: Left Click",
+    2: "Button 2: Right Click",
+    3: "Button 3: Middle Click / Scroll Wheel Press",
+    4: "Button 4: Left Side Back (Thumb)",
+    5: "Button 5: Left Side Forward (Thumb)",
+    6: "Button 6: Right Side Back",
+    7: "Button 7: Right Side Forward",
+    8: "Button 8: Scroll Wheel Tilt Left",
+    9: "Button 9: Scroll Wheel Tilt Right",
+    10: "Button 10: DPI Down",
+    11: "Button 11: DPI Up",
+}
+
+G604_BUTTON_LABELS = {
+    1: "Button 1: Left Click",
+    2: "Button 2: Right Click",
+    3: "Button 3: Middle Click / Scroll Wheel Press",
+    4: "Button 4: Side G4 (Thumb Front Lower)",
+    5: "Button 5: Side G5 (Thumb Mid Lower)",
+    6: "Button 6: Side G6 (Thumb Rear Lower)",
+    7: "Button 7: Side G7 (Thumb Front Upper)",
+    8: "Button 8: Side G8 (Thumb Mid Upper)",
+    9: "Button 9: Side G9 (Thumb Rear Upper)",
+    10: "Button 10: Scroll Wheel Tilt Left",
+    11: "Button 11: Scroll Wheel Tilt Right",
+    12: "Button 12: Top DPI Down",
+    13: "Button 13: Top DPI Up",
+    14: "Button 14: Profile Switch",
+    15: "Button 15: Bluetooth / Lightspeed Toggle",
+}
+
+SUPPORTED_MODELS = {
+    "g502": {"name": "Logitech G502 Series (11 Buttons)", "labels": G502_BUTTON_LABELS, "buttons": 11},
+    "gpro": {"name": "Logitech G PRO / Superlight (5 Buttons)", "labels": GPRO_BUTTON_LABELS, "buttons": 5},
+    "g305": {"name": "Logitech G305 / G203 (6 Buttons)", "labels": G305_BUTTON_LABELS, "buttons": 6},
+    "g703": {"name": "Logitech G703 / G403 / G603 (6 Buttons)", "labels": G703_BUTTON_LABELS, "buttons": 6},
+    "g903": {"name": "Logitech G903 / G900 (11 Buttons)", "labels": G903_BUTTON_LABELS, "buttons": 11},
+    "g604": {"name": "Logitech G604 Lightspeed (15 Buttons)", "labels": G604_BUTTON_LABELS, "buttons": 15},
+}
+
+
+def detect_mouse_model(device_name: str, button_count: int = 11) -> str:
+    """Matches hardware device name and button count to a known mouse model profile."""
+    name = (device_name or "").upper()
+    if "G502" in name or "HERO" in name or "502" in name:
+        return "g502"
+    elif "903" in name or "900" in name:
+        return "g903"
+    elif "604" in name:
+        return "g604"
+    elif "703" in name or "403" in name or "603" in name:
+        return "g703"
+    elif "305" in name or "203" in name or "102" in name:
+        return "g305"
+    elif "SUPERLIGHT" in name or "PRO X" in name or "G PRO" in name:
+        return "gpro"
+
+    # Fallback heuristic by button count
+    if button_count >= 15:
+        return "g604"
+    elif button_count == 11:
+        return "g502"
+    elif button_count == 6:
+        return "g305"
+    elif button_count == 5:
+        return "gpro"
+
+    return "g502"
+
+
+def get_button_labels(device_name: str, button_count: int = 11, model_key: str = None) -> dict:
+    """Returns human-readable button labels for the specified or auto-detected mouse model."""
+    if not model_key:
+        model_key = detect_mouse_model(device_name, button_count)
+
+    model_info = SUPPORTED_MODELS.get(model_key)
+    if model_info:
+        return model_info["labels"]
+    return G502_BUTTON_LABELS
+

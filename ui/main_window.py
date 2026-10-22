@@ -12,7 +12,12 @@ except ImportError:
 
 from core.backend import MouseBackend, get_backup_dir
 from core.models import OnboardConfig, Profile, ButtonAction
-from core.keycodes import G502_BUTTON_LABELS
+from core.keycodes import (
+    G502_BUTTON_LABELS,
+    SUPPORTED_MODELS,
+    detect_mouse_model,
+    get_button_labels,
+)
 from ui.button_editor_dialog import ButtonEditorDialog
 from ui.mouse_canvas import MouseCanvas
 
@@ -53,6 +58,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.backend = MouseBackend("G502")
         self.config: Optional[OnboardConfig] = None
         self.current_gshift_mode = False
+        self.current_model_key = "g502"
 
         self.setWindowTitle("Logitech Onboard Memory Manager")
         self.resize(1080, 720)
@@ -180,6 +186,20 @@ class MainWindow(QtWidgets.QMainWindow):
 
         header_layout.addStretch()
 
+        # Mouse Model / Layout Template Selector
+        model_selector_box = QtWidgets.QHBoxLayout()
+        lbl_model = QtWidgets.QLabel("Model Layout:")
+        lbl_model.setStyleSheet("color: #9ca3af; font-size: 12px;")
+        self.combo_model = QtWidgets.QComboBox()
+        for k, v in SUPPORTED_MODELS.items():
+            self.combo_model.addItem(v["name"], k)
+        self.combo_model.currentIndexChanged.connect(self._on_model_selector_changed)
+        model_selector_box.addWidget(lbl_model)
+        model_selector_box.addWidget(self.combo_model)
+        header_layout.addLayout(model_selector_box)
+
+        header_layout.addSpacing(12)
+
         # Action Buttons in Header
         self.btn_read = QtWidgets.QPushButton("Read from Mouse")
         self.btn_read.setObjectName("secondaryBtn")
@@ -264,7 +284,35 @@ class MainWindow(QtWidgets.QMainWindow):
         self.device_title.setText(f"{config.device_name} (Onboard Memory)")
         self.device_status.setText("Connected and synchronized.")
         self.lbl_active_info.setText(f"Active Profile on Mouse: Profile {config.active_profile_id}")
+
+        # Auto-detect mouse model and update combo selector
+        p1 = config.profiles.get(1)
+        btn_count = len(p1.buttons) if p1 else 11
+        detected_model = detect_mouse_model(config.device_name, btn_count)
+        self.current_model_key = detected_model
+
+        idx = self.combo_model.findData(detected_model)
+        if idx >= 0:
+            self.combo_model.blockSignals(True)
+            self.combo_model.setCurrentIndex(idx)
+            self.combo_model.blockSignals(False)
+
         self._rebuild_tabs()
+
+    def _on_model_selector_changed(self, idx: int):
+        model_key = self.combo_model.currentData()
+        if model_key and model_key != self.current_model_key:
+            self.current_model_key = model_key
+            # Update all active tabs
+            for i in range(self.tab_widget.count()):
+                tab = self.tab_widget.widget(i)
+                if hasattr(tab, "mouse_canvas"):
+                    tab.mouse_canvas.set_model(model_key)
+                if hasattr(tab, "table_widget") and self.config:
+                    pids = sorted(self.config.profiles.keys())
+                    if i < len(pids):
+                        prof = self.config.profiles[pids[i]]
+                        self._populate_button_table(tab.table_widget, prof)
 
     def _get_tab_label(self, prof: Profile) -> str:
         label = f"Profile {prof.profile_id}"
@@ -348,7 +396,7 @@ class MainWindow(QtWidgets.QMainWindow):
         canvas_layout = QtWidgets.QVBoxLayout(canvas_container)
         canvas_layout.setContentsMargins(6, 6, 6, 6)
 
-        mouse_canvas = MouseCanvas()
+        mouse_canvas = MouseCanvas(model_key=self.current_model_key)
         canvas_layout.addWidget(mouse_canvas)
         splitter.addWidget(canvas_container)
 
@@ -433,9 +481,12 @@ class MainWindow(QtWidgets.QMainWindow):
         buttons = prof.gbuttons if self.current_gshift_mode else prof.buttons
         table.setRowCount(len(buttons))
 
+        device_name = self.config.device_name if self.config else "G502"
+        labels = get_button_labels(device_name, len(buttons), self.current_model_key)
+
         for row, action in enumerate(buttons):
             b_num = row + 1
-            label = G502_BUTTON_LABELS.get(b_num, f"Button {b_num}")
+            label = labels.get(b_num, f"Button {b_num}")
 
             item_label = QtWidgets.QTableWidgetItem(label)
             item_label.setFlags(QtCore.Qt.ItemFlag.ItemIsEnabled | QtCore.Qt.ItemFlag.ItemIsSelectable)
@@ -457,7 +508,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def on_edit_button(self, prof: Profile, button_index: int, table: QtWidgets.QTableWidget):
         b_num = button_index + 1
-        b_label = G502_BUTTON_LABELS.get(b_num, f"Button {b_num}")
+        device_name = self.config.device_name if self.config else "G502"
+        labels = get_button_labels(device_name, len(prof.buttons), self.current_model_key)
+        b_label = labels.get(b_num, f"Button {b_num}")
         buttons_list = prof.gbuttons if self.current_gshift_mode else prof.buttons
         current_action = buttons_list[button_index]
 
