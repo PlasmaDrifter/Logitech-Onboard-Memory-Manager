@@ -1,42 +1,70 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
   <defs>
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#1e293b"/>
-      <stop offset="100%" stop-color="#0f172a"/>
+    <!-- Background: Deep charcoal / matte dark slate -->
+    <linearGradient id="panelBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1c1d22"/>
+      <stop offset="100%" stop-color="#121316"/>
     </linearGradient>
-    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#38bdf8"/>
-      <stop offset="100%" stop-color="#2563eb"/>
+
+    <!-- Mouse Body: Understated titanium / matte dark graphite -->
+    <linearGradient id="chassisGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2a2c34"/>
+      <stop offset="100%" stop-color="#1e2026"/>
     </linearGradient>
-    <linearGradient id="chipGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#3b82f6"/>
-      <stop offset="100%" stop-color="#1d4ed8"/>
+
+    <!-- Scroll wheel & buttons: Muted gunmetal steel -->
+    <linearGradient id="metalAccents" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4a4f5b"/>
+      <stop offset="100%" stop-color="#323640"/>
+    </linearGradient>
+
+    <!-- Subtle Onboard Memory Chip: Low-saturation slate / steel -->
+    <linearGradient id="chipMetal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#383c46"/>
+      <stop offset="100%" stop-color="#262930"/>
     </linearGradient>
   </defs>
 
-  <!-- Background rounded squircle -->
-  <rect x="8" y="8" width="112" height="112" rx="28" fill="url(#bgGrad)" stroke="#334155" stroke-width="2"/>
+  <!-- Outer Rounded Squircle Base -->
+  <rect x="8" y="8" width="112" height="112" rx="26" fill="url(#panelBg)" stroke="#2b2e38" stroke-width="1.75"/>
 
-  <!-- Mouse body silhouette -->
-  <path d="M 64 24 C 48 24, 38 38, 38 60 C 38 82, 46 104, 64 104 C 82 104, 90 82, 90 60 C 90 38, 80 24, 64 24 Z" 
-        fill="none" stroke="#64748b" stroke-width="4" stroke-linejoin="round"/>
+  <!-- Subtle inner bevel ring -->
+  <rect x="11" y="11" width="106" height="106" rx="23" fill="none" stroke="#22242c" stroke-width="1"/>
 
-  <!-- Split line & Scroll wheel -->
-  <line x1="64" y1="24" x2="64" y2="44" stroke="#64748b" stroke-width="3"/>
-  <rect x="58" y="32" width="12" height="24" rx="6" fill="url(#accentGrad)"/>
+  <!-- Mouse Body (Matte finish) -->
+  <path d="M 64 22 C 48 22, 36 37, 36 60 C 36 84, 46 106, 64 106 C 82 106, 92 84, 92 60 C 92 37, 80 22, 64 22 Z"
+        fill="url(#chassisGrad)" stroke="#3e4350" stroke-width="2.5" stroke-linejoin="round"/>
 
-  <!-- Thumb / side buttons accent -->
-  <path d="M 36 48 C 33 48, 30 52, 30 58 L 30 72 C 30 78, 33 82, 36 82" 
-        fill="none" stroke="url(#accentGrad)" stroke-width="5" stroke-linecap="round"/>
+  <!-- Subtle ergonomic center parting channel -->
+  <line x1="64" y1="23" x2="64" y2="46" stroke="#2e323c" stroke-width="2"/>
 
-  <!-- Onboard Memory Chip / Circuit emblem -->
-  <rect x="52" y="68" width="24" height="20" rx="3" fill="url(#chipGrad)" stroke="#60a5fa" stroke-width="1.5"/>
-  <circle cx="64" cy="78" r="3" fill="#ffffff"/>
-  <!-- Chip pins -->
-  <line x1="48" y1="72" x2="52" y2="72" stroke="#60a5fa" stroke-width="2"/>
-  <line x1="48" y1="78" x2="52" y2="78" stroke="#60a5fa" stroke-width="2"/>
-  <line x1="48" y1="84" x2="52" y2="84" stroke="#60a5fa" stroke-width="2"/>
-  <line x1="76" y1="72" x2="80" y2="72" stroke="#60a5fa" stroke-width="2"/>
-  <line x1="76" y1="78" x2="80" y2="78" stroke="#60a5fa" stroke-width="2"/>
-  <line x1="76" y1="84" x2="80" y2="84" stroke="#60a5fa" stroke-width="2"/>
+  <!-- Scroll Wheel (Muted gunmetal) -->
+  <rect x="58" y="30" width="12" height="24" rx="6" fill="url(#metalAccents)" stroke="#4b515f" stroke-width="1.25"/>
+  <!-- Wheel grip grooves -->
+  <line x1="60" y1="36" x2="68" y2="36" stroke="#252830" stroke-width="1"/>
+  <line x1="60" y1="42" x2="68" y2="42" stroke="#252830" stroke-width="1"/>
+  <line x1="60" y1="48" x2="68" y2="48" stroke="#252830" stroke-width="1"/>
+
+  <!-- Thumb Rest / Side Flare -->
+  <path d="M 36 50 C 31 52, 29 58, 29 66 C 29 74, 32 80, 36 82" 
+        fill="none" stroke="#4a505f" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Top Side Buttons (G7 / G8 profile) -->
+  <path d="M 45 32 L 48 44" stroke="#4a505f" stroke-width="2.25" stroke-linecap="round"/>
+  <path d="M 42 36 L 45 48" stroke="#383c48" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Onboard Memory Module Emblem (Center Palm Area) -->
+  <rect x="53" y="69" width="22" height="18" rx="3.5" fill="url(#chipMetal)" stroke="#505666" stroke-width="1.5"/>
+  
+  <!-- Subtle Integrated Core Point -->
+  <circle cx="64" cy="78" r="2.5" fill="#717a8c"/>
+
+  <!-- Discrete Chip Traces / Pins -->
+  <line x1="49" y1="73" x2="53" y2="73" stroke="#505666" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="49" y1="78" x2="53" y2="78" stroke="#505666" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="49" y1="83" x2="53" y2="83" stroke="#505666" stroke-width="1.5" stroke-linecap="round"/>
+
+  <line x1="75" y1="73" x2="79" y2="73" stroke="#505666" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="75" y1="78" x2="79" y2="78" stroke="#505666" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="75" y1="83" x2="79" y2="83" stroke="#505666" stroke-width="1.5" stroke-linecap="round"/>
 </svg>

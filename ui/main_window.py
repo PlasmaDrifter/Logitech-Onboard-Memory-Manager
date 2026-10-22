@@ -55,6 +55,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.setWindowTitle("Logitech Onboard Memory Manager")
         self.resize(880, 680)
+
+        icon_path = Path(__file__).resolve().parent.parent / "assets" / "icon.svg"
+        if icon_path.exists():
+            self.setWindowIcon(QtGui.QIcon(str(icon_path)))
+
         self._setup_styling()
         self._init_ui()
 
