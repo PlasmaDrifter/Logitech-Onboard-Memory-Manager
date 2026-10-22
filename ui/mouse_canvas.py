@@ -17,9 +17,9 @@ class MouseCanvas(QtWidgets.QWidget):
             1: {"tag": "B1: Left", "pos": (200, 115), "target": (200, 115), "box_w": 68},
             2: {"tag": "B2: Right", "pos": (340, 115), "target": (340, 115), "box_w": 68},
             3: {"tag": "B3: Wheel", "pos": (270, 95), "target": (270, 95), "box_w": 72},
-            4: {"tag": "B4: Back", "pos": (70, 310), "target": (175, 290), "box_w": 74},
-            5: {"tag": "B5: Sniper", "pos": (70, 245), "target": (155, 235), "box_w": 78},
-            6: {"tag": "B6: Fwd", "pos": (70, 185), "target": (175, 195), "box_w": 74},
+            4: {"tag": "B4: Back", "pos": (70, 260), "target": (172, 255), "box_w": 74},
+            5: {"tag": "B5: Fwd", "pos": (70, 195), "target": (172, 195), "box_w": 74},
+            6: {"tag": "B6: Sniper", "pos": (70, 325), "target": (150, 305), "box_w": 78},
             7: {"tag": "B7: Tilt ◀", "pos": (195, 45), "target": (250, 85), "box_w": 76},
             8: {"tag": "B8: Tilt ▶", "pos": (345, 45), "target": (290, 85), "box_w": 76},
             9: {"tag": "B9: Profile", "pos": (270, 165), "target": (270, 165), "box_w": 78},
@@ -313,10 +313,14 @@ class MouseCanvas(QtWidgets.QWidget):
                 for y in (165, 210, 255, 300):
                     painter.drawRoundedRect(165, y, 12, 18, 2, 2)
             else:
-                # G502 Sniper + Fwd/Back + G7/G8
-                painter.drawRoundedRect(150, 226, 15, 22, 4, 4)
-                painter.drawRoundedRect(170, 185, 15, 24, 3, 3)
-                painter.drawRoundedRect(170, 278, 15, 28, 3, 3)
+                # G502 Physical switches on shell:
+                # Upper side switch (B5 Forward) at Y=185
+                painter.drawRoundedRect(168, 185, 14, 25, 3, 3)
+                # Lower side switch (B4 Back) at Y=245
+                painter.drawRoundedRect(168, 245, 14, 28, 3, 3)
+                # Sniper switch (B6 Thumb rest wing) at Y=295
+                painter.drawRoundedRect(144, 295, 15, 22, 4, 4)
+                # G7 & G8 Index switches
                 painter.drawRoundedRect(185, 58, 12, 22, 3, 3)
                 painter.drawRoundedRect(180, 98, 12, 22, 3, 3)
 
