@@ -14,6 +14,7 @@ from core.backend import MouseBackend, get_backup_dir
 from core.models import OnboardConfig, Profile, ButtonAction
 from core.keycodes import G502_BUTTON_LABELS
 from ui.button_editor_dialog import ButtonEditorDialog
+from ui.mouse_canvas import MouseCanvas
 
 
 class WorkerThread(QtCore.QThread):
@@ -54,7 +55,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.current_gshift_mode = False
 
         self.setWindowTitle("Logitech Onboard Memory Manager")
-        self.resize(880, 680)
+        self.resize(1080, 720)
 
         icon_path = Path(__file__).resolve().parent.parent / "assets" / "icon.svg"
         if icon_path.exists():
@@ -336,6 +337,27 @@ class MainWindow(QtWidgets.QMainWindow):
 
         layout.addLayout(settings_box)
 
+        # Main Body: Splitter with Mouse Canvas on the Left and DPI/Buttons on the Right
+        splitter = QtWidgets.QSplitter(QtCore.Qt.Orientation.Horizontal)
+        splitter.setChildrenCollapsible(False)
+
+        # Left: Interactive Mouse Visualizer
+        canvas_container = QtWidgets.QFrame()
+        canvas_container.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
+        canvas_container.setStyleSheet("background-color: #13151b; border: 1px solid #2e2e38; border-radius: 6px;")
+        canvas_layout = QtWidgets.QVBoxLayout(canvas_container)
+        canvas_layout.setContentsMargins(6, 6, 6, 6)
+
+        mouse_canvas = MouseCanvas()
+        canvas_layout.addWidget(mouse_canvas)
+        splitter.addWidget(canvas_container)
+
+        # Right: DPI Stages + Button Table
+        right_panel = QtWidgets.QWidget()
+        right_layout = QtWidgets.QVBoxLayout(right_panel)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(10)
+
         # DPI Group Box
         dpi_group = QtWidgets.QGroupBox("DPI Sensitivity Stages")
         dpi_layout = QtWidgets.QHBoxLayout(dpi_group)
@@ -356,7 +378,7 @@ class MainWindow(QtWidgets.QMainWindow):
             stage_box.addWidget(spin_dpi)
             stage_box.addWidget(radio_default)
             dpi_layout.addLayout(stage_box)
-        layout.addWidget(dpi_group)
+        right_layout.addWidget(dpi_group)
 
         # Buttons Table
         table = QtWidgets.QTableWidget()
@@ -369,10 +391,41 @@ class MainWindow(QtWidgets.QMainWindow):
         table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
 
         self._populate_button_table(table, prof)
-        layout.addWidget(table, stretch=1)
+        right_layout.addWidget(table, stretch=1)
 
-        # Store reference on tab
+        splitter.addWidget(right_panel)
+        splitter.setStretchFactor(0, 4)
+        splitter.setStretchFactor(1, 6)
+
+        layout.addWidget(splitter, stretch=1)
+
+        # Connect bidirectional signals between canvas and table
+        def on_canvas_button_clicked(b_num: int):
+            row = b_num - 1
+            if 0 <= row < table.rowCount():
+                table.selectRow(row)
+                table.scrollToItem(table.item(row, 0))
+
+        def on_canvas_button_double_clicked(b_num: int):
+            row = b_num - 1
+            if 0 <= row < table.rowCount():
+                self.on_edit_button(prof, row, table)
+
+        def on_table_selection_changed():
+            selected_rows = table.selectionModel().selectedRows()
+            if selected_rows:
+                row = selected_rows[0].row()
+                mouse_canvas.set_selected_button(row + 1)
+            else:
+                mouse_canvas.set_selected_button(None)
+
+        mouse_canvas.button_clicked.connect(on_canvas_button_clicked)
+        mouse_canvas.button_double_clicked.connect(on_canvas_button_double_clicked)
+        table.itemSelectionChanged.connect(on_table_selection_changed)
+
+        # Store references on tab
         tab.table_widget = table
+        tab.mouse_canvas = mouse_canvas
 
         return tab
 
