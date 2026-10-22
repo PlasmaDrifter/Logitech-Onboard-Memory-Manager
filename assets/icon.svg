@@ -1,70 +1,64 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
   <defs>
-    <!-- Background: Deep charcoal / matte dark slate -->
-    <linearGradient id="panelBg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#1c1d22"/>
-      <stop offset="100%" stop-color="#121316"/>
+    <!-- Dark slate squircle background -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e222b"/>
+      <stop offset="100%" stop-color="#0f1117"/>
     </linearGradient>
 
-    <!-- Mouse Body: Understated titanium / matte dark graphite -->
-    <linearGradient id="chassisGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#2a2c34"/>
-      <stop offset="100%" stop-color="#1e2026"/>
+    <!-- Titanium metallic body fill -->
+    <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#3b4252"/>
+      <stop offset="100%" stop-color="#242933"/>
     </linearGradient>
 
-    <!-- Scroll wheel & buttons: Muted gunmetal steel -->
-    <linearGradient id="metalAccents" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#4a4f5b"/>
-      <stop offset="100%" stop-color="#323640"/>
+    <!-- Silver wheel & chip accent -->
+    <linearGradient id="silverGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#d8dee9"/>
+      <stop offset="100%" stop-color="#8892b0"/>
     </linearGradient>
 
-    <!-- Subtle Onboard Memory Chip: Low-saturation slate / steel -->
-    <linearGradient id="chipMetal" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#383c46"/>
-      <stop offset="100%" stop-color="#262930"/>
+    <!-- Muted cyan-steel LED / core dot -->
+    <linearGradient id="coreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#81a1c1"/>
+      <stop offset="100%" stop-color="#5e81ac"/>
     </linearGradient>
   </defs>
 
-  <!-- Outer Rounded Squircle Base -->
-  <rect x="8" y="8" width="112" height="112" rx="26" fill="url(#panelBg)" stroke="#2b2e38" stroke-width="1.75"/>
+  <!-- Base Plate -->
+  <rect x="8" y="8" width="112" height="112" rx="26" fill="url(#bgGrad)" stroke="#434c5e" stroke-width="2"/>
 
-  <!-- Subtle inner bevel ring -->
-  <rect x="11" y="11" width="106" height="106" rx="23" fill="none" stroke="#22242c" stroke-width="1"/>
+  <!-- Mouse Silhouette Shadow/Glow -->
+  <path d="M 64 20 C 46 20, 34 36, 34 60 C 34 85, 45 106, 64 106 C 83 106, 94 85, 94 60 C 94 36, 82 20, 64 20 Z"
+        fill="url(#bodyGrad)" stroke="#8892b0" stroke-width="2.5" stroke-linejoin="round"/>
 
-  <!-- Mouse Body (Matte finish) -->
-  <path d="M 64 22 C 48 22, 36 37, 36 60 C 36 84, 46 106, 64 106 C 82 106, 92 84, 92 60 C 92 37, 80 22, 64 22 Z"
-        fill="url(#chassisGrad)" stroke="#3e4350" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- Ergonomic parting line -->
+  <line x1="64" y1="21" x2="64" y2="44" stroke="#8892b0" stroke-width="2"/>
 
-  <!-- Subtle ergonomic center parting channel -->
-  <line x1="64" y1="23" x2="64" y2="46" stroke="#2e323c" stroke-width="2"/>
-
-  <!-- Scroll Wheel (Muted gunmetal) -->
-  <rect x="58" y="30" width="12" height="24" rx="6" fill="url(#metalAccents)" stroke="#4b515f" stroke-width="1.25"/>
-  <!-- Wheel grip grooves -->
-  <line x1="60" y1="36" x2="68" y2="36" stroke="#252830" stroke-width="1"/>
-  <line x1="60" y1="42" x2="68" y2="42" stroke="#252830" stroke-width="1"/>
-  <line x1="60" y1="48" x2="68" y2="48" stroke="#252830" stroke-width="1"/>
+  <!-- Scroll Wheel (Brushed Silver) -->
+  <rect x="58" y="28" width="12" height="24" rx="6" fill="#1e222b" stroke="#eceff4" stroke-width="1.8"/>
+  <line x1="60" y1="34" x2="68" y2="34" stroke="#d8dee9" stroke-width="1.5"/>
+  <line x1="60" y1="40" x2="68" y2="40" stroke="#d8dee9" stroke-width="1.5"/>
+  <line x1="60" y1="46" x2="68" y2="46" stroke="#d8dee9" stroke-width="1.5"/>
 
   <!-- Thumb Rest / Side Flare -->
-  <path d="M 36 50 C 31 52, 29 58, 29 66 C 29 74, 32 80, 36 82" 
-        fill="none" stroke="#4a505f" stroke-width="3" stroke-linecap="round"/>
+  <path d="M 34 48 C 28 50, 26 57, 26 66 C 26 75, 29 82, 34 84" 
+        fill="none" stroke="#d8dee9" stroke-width="3" stroke-linecap="round"/>
 
   <!-- Top Side Buttons (G7 / G8 profile) -->
-  <path d="M 45 32 L 48 44" stroke="#4a505f" stroke-width="2.25" stroke-linecap="round"/>
-  <path d="M 42 36 L 45 48" stroke="#383c48" stroke-width="2" stroke-linecap="round"/>
+  <path d="M 43 32 L 46 44" stroke="#d8dee9" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M 39 37 L 42 48" stroke="#8892b0" stroke-width="2" stroke-linecap="round"/>
 
-  <!-- Onboard Memory Module Emblem (Center Palm Area) -->
-  <rect x="53" y="69" width="22" height="18" rx="3.5" fill="url(#chipMetal)" stroke="#505666" stroke-width="1.5"/>
-  
-  <!-- Subtle Integrated Core Point -->
-  <circle cx="64" cy="78" r="2.5" fill="#717a8c"/>
+  <!-- Onboard Memory Microchip (Clean Silver & Slate) -->
+  <rect x="51" y="67" width="26" height="20" rx="4" fill="#1b1f27" stroke="#eceff4" stroke-width="1.8"/>
+  <circle cx="64" cy="77" r="3" fill="url(#coreGrad)"/>
 
-  <!-- Discrete Chip Traces / Pins -->
-  <line x1="49" y1="73" x2="53" y2="73" stroke="#505666" stroke-width="1.5" stroke-linecap="round"/>
-  <line x1="49" y1="78" x2="53" y2="78" stroke="#505666" stroke-width="1.5" stroke-linecap="round"/>
-  <line x1="49" y1="83" x2="53" y2="83" stroke="#505666" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Chip Pins (Bright silver) -->
+  <line x1="46" y1="71" x2="51" y2="71" stroke="#d8dee9" stroke-width="2" stroke-linecap="round"/>
+  <line x1="46" y1="77" x2="51" y2="77" stroke="#d8dee9" stroke-width="2" stroke-linecap="round"/>
+  <line x1="46" y1="83" x2="51" y2="83" stroke="#d8dee9" stroke-width="2" stroke-linecap="round"/>
 
-  <line x1="75" y1="73" x2="79" y2="73" stroke="#505666" stroke-width="1.5" stroke-linecap="round"/>
-  <line x1="75" y1="78" x2="79" y2="78" stroke="#505666" stroke-width="1.5" stroke-linecap="round"/>
-  <line x1="75" y1="83" x2="79" y2="83" stroke="#505666" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="77" y1="71" x2="82" y2="71" stroke="#d8dee9" stroke-width="2" stroke-linecap="round"/>
+  <line x1="77" y1="77" x2="82" y2="77" stroke="#d8dee9" stroke-width="2" stroke-linecap="round"/>
+  <line x1="77" y1="83" x2="82" y2="83" stroke="#d8dee9" stroke-width="2" stroke-linecap="round"/>
 </svg>
