@@ -1,64 +1,95 @@
 # Logitech Onboard Memory Manager (Linux)
 
-A native Linux GUI application designed to inspect, edit, and burn button assignments, DPI stages, and profiles directly into the onboard flash memory of Logitech gaming mice (such as the Logitech G502 X PLUS, G502 LIGHTSPEED, HERO, etc.).
+A native Linux GUI application designed to inspect, edit, and write button assignments, DPI stages, and profiles directly into the onboard flash memory of Logitech gaming mice (such as the Logitech G502 X PLUS, G502 LIGHTSPEED, HERO, and other HID++ 2.0 compatible hardware).
 
-No Windows, Logitech G HUB, or background services required.
+No Windows installation, Logitech G HUB, Solaar, or background daemons required.
 
 ---
 
-## Key Features
+## Features
 
-- **Direct Hardware Onboard Memory Access**: Reads and writes directly to hardware flash sectors. Changes persist across all operating systems, computers, and reboots.
-- **Physical Button Mapping**: Remap all 11 physical mouse buttons:
-  - Standard Mouse Clicks (Left, Right, Middle, Back, Forward, Extra buttons)
-  - Keyboard Shortcuts (Interactive recorder capturing any key with Ctrl, Shift, Alt, Super modifiers)
-  - Mouse Functions (DPI Shift/Sniper, Next DPI, Prev DPI, Cycle DPI, Profile Switch, Wheel Tilts)
+- **Direct Hardware Onboard Memory Access**: Communicates directly over `/dev/hidraw*` via raw HID++ 2.0 protocol (`0x8100` Onboard Profiles feature). Edits are burned straight into the mouse flash sectors and persist across computers, operating systems, and reboots.
+- **Physical Button Remapping**:
+  - Standard Mouse Buttons (Left, Right, Middle, Back, Forward, Extra buttons)
+  - Keyboard Shortcuts (Interactive recorder capturing single keys or complex combos with Ctrl, Shift, Alt, and Super modifiers)
+  - Hardware Functions (DPI Shift/Sniper, Next DPI, Previous DPI, Cycle DPI, Profile Switch, Wheel Tilt Left/Right)
   - Disabled / No Action
-- **G-Shift Mode Support**: Configure secondary button behaviors when G-Shift is active.
-- **DPI Stages & Polling Rates**: Customize up to 5 DPI sensitivity stages per profile and adjust reporting rates (1000 Hz, 500 Hz, etc.).
-- **Multi-Profile Management**: Supports all 5 onboard hardware profile slots.
-- **Automated Backup & Safety**: Automatically writes a timestamped YAML backup before flashing any sector changes.
-- **Zero-Install / Fresh Machine Ready**: Can be run directly from source or compiled into a single self-contained portable executable.
+- **G-Shift Support**: Configure distinct secondary button bindings for G-Shift mode.
+- **DPI Profiles & Polling Rate**: Adjust up to 5 DPI sensitivity stages per profile and set report rates (125 Hz, 250 Hz, 500 Hz, 1000 Hz).
+- **Multi-Profile Management**: Supports all 5 onboard hardware profile slots with direct active profile switching.
+- **Lighting Controls**: Includes hardware RGB shutoff and an automatic toggle to disable RGB lighting on save.
+- **Automated Backups**: Automatically generates timestamped YAML backups of all onboard memory sectors before committing changes.
+- **Zero Dependencies via AppImage**: Single executable format that runs out of the box on any modern Linux distribution.
 
 ---
 
-## Quick Start
+## Download & Installation
 
-### Running Directly from Source
+### Option 1: AppImage (Recommended)
+
+Download the latest standalone executable from the [Releases](https://github.com/PlasmaDrifter/Logitech-Onboard-Memory-Manager/releases) page:
+
 ```bash
-cd ~/Source/logitech-onboard-gui
+chmod +x Logitech-Onboard-Memory-Manager-x86_64.AppImage
+./Logitech-Onboard-Memory-Manager-x86_64.AppImage
+```
+
+### Option 2: Running from Source
+
+Requirements: Python 3.10+ and PySide6 (`pip install PySide6 pyyaml`).
+
+```bash
+git clone https://github.com/PlasmaDrifter/Logitech-Onboard-Memory-Manager.git
+cd Logitech-Onboard-Memory-Manager
 ./main.py
 ```
 
-### Desktop Integration (KDE / GNOME Menu)
-To add a launcher to your application menu:
+### Option 3: Desktop Menu Integration
+
+To integrate into your KDE Plasma or GNOME desktop launcher:
+
 ```bash
-cd ~/Source/logitech-onboard-gui
 ./install.sh
 ```
-This adds `logitech-onboard-gui` to your `PATH` and registers the application in your desktop application menu.
 
-### Building a Standalone Single-File Executable
-To generate a single portable binary that runs on any fresh Linux machine with zero setup:
+This creates a symlink in `~/.local/bin/logitech-onboard-gui`, installs the application icon, and adds the `.desktop` launcher.
+
+---
+
+## Building
+
+### Building the AppImage
 ```bash
-cd ~/Source/logitech-onboard-gui
+./build_appimage.sh
+```
+The output file will be generated in `dist/Logitech-Onboard-Memory-Manager-x86_64.AppImage`.
+
+### Building a Standalone Binary
+```bash
 ./build_standalone.sh
 ```
-The resulting binary will be located in `dist/logitech-onboard-gui`.
+The single-file binary will be generated in `dist/logitech-onboard-gui`.
 
 ---
 
 ## Hardware Permissions (udev)
 
-On modern Linux distributions utilizing systemd and `uaccess`, standard input devices are accessible to logged-in desktop users without root. 
+Standard Linux distributions running systemd automatically grant access to user input devices (`/dev/hidraw*`) via `uaccess`.
 
-If running on a minimal or custom Linux installation where `/dev/hidraw*` is restricted to root, add this standard udev rule:
+If running on a minimal or restricted system where non-root access to `/dev/hidraw*` is blocked, install this udev rule:
 
 `/etc/udev/rules.d/99-logitech-hidraw.rules`:
 ```udev
 SUBSYSTEM=="hidraw", ATTRS{idVendor}=="046d", TAG+="uaccess"
 ```
+
 Reload rules:
 ```bash
 sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
+
+---
+
+## License
+
+MIT License.
