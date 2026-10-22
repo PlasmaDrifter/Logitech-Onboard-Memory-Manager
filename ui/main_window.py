@@ -52,7 +52,7 @@ class WorkerThread(QtCore.QThread):
             self.finished_signal.emit(False, str(e))
 
 
-APP_VERSION = "v0.6.0"
+APP_VERSION = "v0.7.0"
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -64,7 +64,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.current_model_key = "g502"
 
         self.setWindowTitle(f"Logitech Onboard Memory Manager {APP_VERSION}")
-        self.resize(1080, 720)
+        self.resize(1180, 760)
 
         icon_path = Path(__file__).resolve().parent.parent / "assets" / "icon.svg"
         if icon_path.exists():
@@ -460,8 +460,8 @@ class MainWindow(QtWidgets.QMainWindow):
         right_layout.addWidget(table, stretch=1)
 
         splitter.addWidget(right_panel)
-        splitter.setStretchFactor(0, 4)
-        splitter.setStretchFactor(1, 6)
+        splitter.setStretchFactor(0, 5)
+        splitter.setStretchFactor(1, 5)
 
         layout.addWidget(splitter, stretch=1)
 
@@ -490,10 +490,18 @@ class MainWindow(QtWidgets.QMainWindow):
         table.itemSelectionChanged.connect(on_table_selection_changed)
 
         # Store references on tab
+        table.tab_owner = tab
         tab.table_widget = table
         tab.mouse_canvas = mouse_canvas
+        self._update_mouse_canvas_actions(tab, prof)
 
         return tab
+
+    def _update_mouse_canvas_actions(self, tab: QtWidgets.QWidget, prof: Profile):
+        if hasattr(tab, "mouse_canvas"):
+            buttons = prof.gbuttons if self.current_gshift_mode else prof.buttons
+            actions_map = {row + 1: action.display_name() for row, action in enumerate(buttons)}
+            tab.mouse_canvas.set_button_actions(actions_map)
 
     def _populate_button_table(self, table: QtWidgets.QTableWidget, prof: Profile):
         buttons = prof.gbuttons if self.current_gshift_mode else prof.buttons
@@ -519,10 +527,15 @@ class MainWindow(QtWidgets.QMainWindow):
             btn_edit.clicked.connect(lambda _, r=row, p=prof, tbl=table: self.on_edit_button(p, r, tbl))
             table.setCellWidget(row, 2, btn_edit)
 
+        tab = getattr(table, "tab_owner", None)
+        if tab:
+            self._update_mouse_canvas_actions(tab, prof)
+
     def _on_mode_toggle(self, is_std: bool, tab: QtWidgets.QWidget, prof: Profile):
         self.current_gshift_mode = not is_std
         if hasattr(tab, "table_widget"):
             self._populate_button_table(tab.table_widget, prof)
+        self._update_mouse_canvas_actions(tab, prof)
 
     def on_edit_button(self, prof: Profile, button_index: int, table: QtWidgets.QTableWidget):
         b_num = button_index + 1
@@ -536,6 +549,9 @@ class MainWindow(QtWidgets.QMainWindow):
         if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
             buttons_list[button_index] = dialog.result_action
             self._populate_button_table(table, prof)
+            tab = getattr(table, "tab_owner", None)
+            if tab:
+                self._update_mouse_canvas_actions(tab, prof)
 
     def _on_profile_enabled_toggled(self, prof: Profile, val: bool):
         prof.enabled = 1 if val else 0

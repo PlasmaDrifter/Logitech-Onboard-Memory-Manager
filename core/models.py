@@ -49,7 +49,7 @@ class ButtonAction:
             return FUNCTION_ACTIONS.get(self.value, f"Function 0x{self.value:X}")
         elif self.behavior == 0:
             if self.macro_text:
-                return f"Macro: {self.macro_text}"
+                return self.macro_text
             return f"Macro (Sector {self.sector}, Addr {self.address})"
         elif self.behavior == 15:
             return "Disabled"
