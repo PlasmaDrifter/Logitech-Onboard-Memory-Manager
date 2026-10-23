@@ -59,21 +59,36 @@ class RuleEditDialog(QtWidgets.QDialog):
         self.combo_slot.addItem("Slot 5 (Dynamic Staging - Unlimited Library)", 5)
         self.combo_slot.currentIndexChanged.connect(self._on_slot_changed)
 
+        profile_layout = QtWidgets.QHBoxLayout()
         self.combo_profile = QtWidgets.QComboBox()
         self.combo_profile.setMinimumHeight(32)
         self.combo_profile.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
         self.combo_profile.setEditable(True)
+        self.combo_profile.setInsertPolicy(QtWidgets.QComboBox.InsertPolicy.InsertAtTop)
         for p in self.available_profiles:
             self.combo_profile.addItem(p)
 
+        self.btn_new_profile = QtWidgets.QPushButton("+ New Profile")
+        self.btn_new_profile.setObjectName("secondaryBtn")
+        self.btn_new_profile.setMinimumHeight(32)
+        self.btn_new_profile.setToolTip("Type a new profile name for this game or application")
+        self.btn_new_profile.clicked.connect(self._on_prompt_new_profile)
+
+        profile_layout.addWidget(self.combo_profile, stretch=1)
+        profile_layout.addWidget(self.btn_new_profile)
+
         self.lbl_profile = QtWidgets.QLabel("Library Profile:")
-        self.lbl_profile_hint = QtWidgets.QLabel("Select a JSON profile from your disk library to stage into Slot 5 when this game runs.")
+        self.lbl_profile_hint = QtWidgets.QLabel(
+            "Select an existing profile or type a new name (e.g. Chrome.json). "
+            "After creating the rule, click 'Edit Buttons' to configure and save its bindings."
+        )
         self.lbl_profile_hint.setStyleSheet("color: #9ca3af; font-size: 11px;")
         self.lbl_profile_hint.setWordWrap(True)
 
         self.chk_enabled = QtWidgets.QCheckBox("Rule Enabled")
         self.chk_enabled.setChecked(True)
 
+        self._custom_profile_selected = False
         if rule:
             self.edit_name.setText(rule.name)
             self.edit_pattern.setText(rule.pattern)
@@ -86,11 +101,21 @@ class RuleEditDialog(QtWidgets.QDialog):
             else:
                 self.combo_profile.setEditText(rule.profile_name)
             self.chk_enabled.setChecked(rule.enabled)
+            self._custom_profile_selected = True
+        else:
+            self.edit_name.textChanged.connect(self._on_name_changed)
+            # Default to generic placeholder or name if already set
+            if self.edit_name.text().strip():
+                self.combo_profile.setEditText(f"{self.edit_name.text().strip()}.json")
+            elif not self.available_profiles:
+                self.combo_profile.setEditText("MyProfile.json")
+
+        self.combo_profile.currentIndexChanged.connect(self._on_profile_combo_changed)
 
         form.addRow("Game Name:", self.edit_name)
         form.addRow("Match Pattern:", pattern_layout)
         form.addRow("Target Slot:", self.combo_slot)
-        form.addRow(self.lbl_profile, self.combo_profile)
+        form.addRow(self.lbl_profile, profile_layout)
         form.addRow("", self.lbl_profile_hint)
         form.addRow("", self.chk_enabled)
 
@@ -154,12 +179,36 @@ class RuleEditDialog(QtWidgets.QDialog):
         self.btn_capture.setEnabled(True)
         self.btn_capture.setText("Capture Window")
 
+    def _on_name_changed(self, text: str):
+        t = text.strip()
+        if t and not self._custom_profile_selected:
+            self.combo_profile.setEditText(f"{t}.json")
+
+    def _on_profile_combo_changed(self, index: int):
+        self._custom_profile_selected = True
+
+    def _on_prompt_new_profile(self):
+        default_name = f"{self.edit_name.text().strip() or 'App'}.json"
+        name, ok = QtWidgets.QInputDialog.getText(
+            self, "New Library Profile", "Enter profile filename (.json):",
+            text=default_name
+        )
+        if ok and name.strip():
+            n = name.strip()
+            if not n.endswith(".json"):
+                n += ".json"
+            self.combo_profile.setEditText(n)
+            self._custom_profile_selected = True
+
     def get_rule(self) -> GameRule:
+        prof_name = self.combo_profile.currentText().strip()
+        if prof_name and not prof_name.endswith(".json"):
+            prof_name += ".json"
         return GameRule(
             name=self.edit_name.text().strip() or "Unnamed Game",
             pattern=self.edit_pattern.text().strip(),
             target_slot=self.combo_slot.currentData(),
-            profile_name=self.combo_profile.currentText().strip(),
+            profile_name=prof_name,
             enabled=self.chk_enabled.isChecked()
         )
 
