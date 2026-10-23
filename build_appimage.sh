@@ -54,7 +54,7 @@ if [ ! -x "${APPIMAGETOOL}" ]; then
     exit 1
 fi
 
-VERSION="${1:-v0.9.4}"
+VERSION="${1:-v0.9.5}"
 OUTPUT_NAME="OMM-Linux-${VERSION}-x86_64.AppImage"
 rm -f "${DIST_DIR}/${OUTPUT_NAME}"
 ARCH=x86_64 "${APPIMAGETOOL}" "${APP_DIR}" "${DIST_DIR}/${OUTPUT_NAME}"

@@ -47,8 +47,8 @@ A native Linux Onboard Memory Manager and full **Logitech G HUB replacement** fo
 Download the latest standalone executable from the [Releases](https://github.com/PlasmaDrifter/OMM-Linux/releases) page:
 
 ```bash
-chmod +x OMM-Linux-v0.9.4-x86_64.AppImage
-./OMM-Linux-v0.9.4-x86_64.AppImage
+chmod +x OMM-Linux-v0.9.5-x86_64.AppImage
+./OMM-Linux-v0.9.5-x86_64.AppImage
 ```
 
 ### Option 2: Running from Source
@@ -87,7 +87,7 @@ To cleanly remove desktop integration, command launcher symlinks, and background
 ```bash
 ./build_appimage.sh
 ```
-The output file will be generated in `dist/OMM-Linux-v0.9.4-x86_64.AppImage`.
+The output file will be generated in `dist/OMM-Linux-v0.9.5-x86_64.AppImage`.
 
 ### Building a Standalone Binary
 ```bash
