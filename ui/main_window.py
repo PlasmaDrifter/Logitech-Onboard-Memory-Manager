@@ -850,20 +850,11 @@ class MainWindow(QtWidgets.QMainWindow):
         if not self.config:
             return
 
-        confirm = QtWidgets.QMessageBox.question(
-            self,
-            "Apply Changes to Mouse",
-            "This will flash the updated configuration directly to the mouse onboard memory.\n\n"
-            "An automatic backup of your existing settings will be created first.\n\n"
-            "Do you want to proceed?",
-            QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
-        )
-        if confirm != QtWidgets.QMessageBox.StandardButton.Yes:
-            return
-
-        self.device_status.setText("Saving and flashing to mouse memory...")
         self.btn_apply.setEnabled(False)
+        self.btn_apply.setText("Flashing...")
         self.btn_read.setEnabled(False)
+        self.device_status.setText("Flashing configuration to mouse onboard memory...")
+        self.device_status.setStyleSheet("color: #38bdf8; font-weight: bold; padding: 2px 8px; background: #0c4a6e; border-radius: 4px;")
 
         auto_off = self.chk_auto_turn_off_rgb.isChecked() if hasattr(self, "chk_auto_turn_off_rgb") else False
         self.worker = WorkerThread(self.backend.write_profiles, self.config, auto_off)
@@ -872,6 +863,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _on_write_finished(self, success: bool, msg: str):
         self.btn_apply.setEnabled(True)
+        self.btn_apply.setText("Apply to Mouse")
         self.btn_read.setEnabled(True)
 
         if success:
@@ -892,9 +884,12 @@ class MainWindow(QtWidgets.QMainWindow):
                     }
                     self.games_tab.mgr.save_profile_to_library(staged, p5_dict)
 
-            self.device_status.setText("Settings successfully burned to mouse memory.")
+            self.device_status.setText("Changes successfully applied to mouse memory.")
+            self.device_status.setStyleSheet("color: #4ade80; font-weight: bold; padding: 2px 8px; background: #14532d; border-radius: 4px;")
+            QtCore.QTimer.singleShot(4000, lambda: self.device_status.setStyleSheet("color: #a0a0a0; padding: 2px 8px;"))
         else:
             self.device_status.setText("Failed to burn to memory.")
+            self.device_status.setStyleSheet("color: #ef4444; font-weight: bold; padding: 2px 8px; background: #450a0a; border-radius: 4px;")
             QtWidgets.QMessageBox.critical(self, "Write Failed", f"Could not write to mouse:\n\n{msg}")
 
     def on_open_backups(self):

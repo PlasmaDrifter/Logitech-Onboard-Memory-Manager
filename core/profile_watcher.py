@@ -234,7 +234,7 @@ class ProfileWatcher:
             except Exception as e:
                 logger.debug(f"Watcher loop exception: {e}")
 
-            poll_sec = max(1.0, self.settings.poll_interval_ms / 1000.0)
+            poll_sec = max(0.05, self.settings.poll_interval_ms / 1000.0)
             time.sleep(poll_sec)
 
     def _handle_game_rule(self, rule: GameRule) -> None:

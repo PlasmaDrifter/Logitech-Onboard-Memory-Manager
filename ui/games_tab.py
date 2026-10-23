@@ -303,6 +303,22 @@ class GamesTab(QtWidgets.QWidget):
 
         svc_layout.addSpacing(14)
 
+        lbl_poll = QtWidgets.QLabel("Polling Interval:")
+        lbl_poll.setStyleSheet("color: #9ca3af; font-size: 12px;")
+        svc_layout.addWidget(lbl_poll)
+
+        self.combo_poll_interval = QtWidgets.QComboBox()
+        self.combo_poll_interval.setFixedHeight(26)
+        self.combo_poll_interval.addItem("100 ms (Fastest)", 100)
+        self.combo_poll_interval.addItem("200 ms (Fast)", 200)
+        self.combo_poll_interval.addItem("500 ms (Balanced)", 500)
+        self.combo_poll_interval.addItem("1000 ms (1.0s Default)", 1000)
+        self.combo_poll_interval.addItem("2000 ms (2.0s Low CPU)", 2000)
+        self.combo_poll_interval.currentIndexChanged.connect(self._on_poll_interval_changed)
+        svc_layout.addWidget(self.combo_poll_interval)
+
+        svc_layout.addSpacing(14)
+
         self.chk_svc_autostart = QtWidgets.QCheckBox("Automatically start service on boot / login")
         self.chk_svc_autostart.setStyleSheet("font-size: 12px; color: #cbd5e1;")
         self.chk_svc_autostart.toggled.connect(self._on_toggle_svc_autostart)
@@ -435,6 +451,12 @@ class GamesTab(QtWidgets.QWidget):
             self.combo_default_slot.blockSignals(True)
             self.combo_default_slot.setCurrentIndex(idx)
             self.combo_default_slot.blockSignals(False)
+
+        p_idx = self.combo_poll_interval.findData(settings.poll_interval_ms)
+        if p_idx != -1:
+            self.combo_poll_interval.blockSignals(True)
+            self.combo_poll_interval.setCurrentIndex(p_idx)
+            self.combo_poll_interval.blockSignals(False)
 
         self._populate_rules()
         self._scan_installed_games()
@@ -603,12 +625,8 @@ class GamesTab(QtWidgets.QWidget):
             slot_idx = rule.target_slot - 1
             if 0 <= slot_idx < main_win.tab_widget.count():
                 main_win.tab_widget.setCurrentIndex(slot_idx)
-                QtWidgets.QMessageBox.information(
-                    self,
-                    f"Editing {rule.name}",
-                    f"Switched to 'Profile {rule.target_slot}' tab for {rule.name}.\n\n"
-                    "Customize buttons or DPI stages, then click 'Apply to Mouse' in the top right to save."
-                )
+                if hasattr(main_win, "device_status"):
+                    main_win.device_status.setText(f"Editing buttons for '{rule.name}' (Slot {rule.target_slot}). Click 'Apply to Mouse' to save.")
             return
 
         # Case 2: Dynamic Staging (Slot 5)
@@ -651,12 +669,8 @@ class GamesTab(QtWidgets.QWidget):
         slot5_idx = 4
         if 0 <= slot5_idx < main_win.tab_widget.count():
             main_win._rebuild_tabs(target_index=slot5_idx)
-            QtWidgets.QMessageBox.information(
-                self,
-                f"Editing {rule.name}",
-                f"Loaded profile for '{rule.name}' into Profile 5.\n\n"
-                "Customize buttons or DPI stages, then click 'Apply to Mouse' to save and flash it."
-            )
+            if hasattr(main_win, "device_status"):
+                main_win.device_status.setText(f"Loaded '{rule.name}' into Slot 5 (Dynamic Staging). Click 'Apply to Mouse' to save.")
 
     def _on_edit_rule(self):
         row = self.table_rules.currentRow()
@@ -698,6 +712,14 @@ class GamesTab(QtWidgets.QWidget):
         settings.default_slot = slot
         self.mgr.save_settings(settings)
         self.watcher.reload()
+
+    def _on_poll_interval_changed(self):
+        val = self.combo_poll_interval.currentData()
+        if val:
+            settings = self.mgr.get_settings()
+            settings.poll_interval_ms = val
+            self.mgr.save_settings(settings)
+            self.watcher.reload()
 
     def _on_profile_switched_callback(self, slot: int, label: Optional[str]):
         QtCore.QMetaObject.invokeMethod(

@@ -156,18 +156,7 @@ class ButtonEditorDialog(QtWidgets.QDialog):
         self.tab_widget = QtWidgets.QTabWidget()
         layout.addWidget(self.tab_widget)
 
-        # Tab 1: Mouse Button Click
-        tab_mouse = QtWidgets.QWidget()
-        tm_layout = QtWidgets.QVBoxLayout(tab_mouse)
-        tm_layout.addWidget(QtWidgets.QLabel("Select standard mouse button action:"))
-        self.combo_mouse_button = QtWidgets.QComboBox()
-        for mask, name in MOUSE_BUTTONS.items():
-            self.combo_mouse_button.addItem(name, mask)
-        tm_layout.addWidget(self.combo_mouse_button)
-        tm_layout.addStretch()
-        self.tab_widget.addTab(tab_mouse, "Mouse Click")
-
-        # Tab 2: Keyboard Shortcut
+        # Tab 0: Keyboard Shortcut (Leftmost default)
         tab_key = QtWidgets.QWidget()
         tk_layout = QtWidgets.QVBoxLayout(tab_key)
         tk_layout.addWidget(QtWidgets.QLabel("Press any key or combination:"))
@@ -201,7 +190,18 @@ class ButtonEditorDialog(QtWidgets.QDialog):
         tk_layout.addStretch()
         self.tab_widget.addTab(tab_key, "Keyboard Key")
 
-        # Tab 3: Hardware Functions
+        # Tab 1: Mouse Button Click
+        tab_mouse = QtWidgets.QWidget()
+        tm_layout = QtWidgets.QVBoxLayout(tab_mouse)
+        tm_layout.addWidget(QtWidgets.QLabel("Select standard mouse button action:"))
+        self.combo_mouse_button = QtWidgets.QComboBox()
+        for mask, name in MOUSE_BUTTONS.items():
+            self.combo_mouse_button.addItem(name, mask)
+        tm_layout.addWidget(self.combo_mouse_button)
+        tm_layout.addStretch()
+        self.tab_widget.addTab(tab_mouse, "Mouse Click")
+
+        # Tab 2: Hardware Functions
         tab_func = QtWidgets.QWidget()
         tf_layout = QtWidgets.QVBoxLayout(tab_func)
         tf_layout.addWidget(QtWidgets.QLabel("Select hardware/DPI function:"))
@@ -213,15 +213,21 @@ class ButtonEditorDialog(QtWidgets.QDialog):
         tf_layout.addStretch()
         self.tab_widget.addTab(tab_func, "DPI / Function")
 
-        # Tab 4: Disabled
+        # Tab 3: Disabled
         tab_disabled = QtWidgets.QWidget()
         td_layout = QtWidgets.QVBoxLayout(tab_disabled)
         td_layout.addWidget(QtWidgets.QLabel("Disables this button so it performs no action."))
         td_layout.addStretch()
         self.tab_widget.addTab(tab_disabled, "Disabled")
 
+        # Default to Keyboard Key tab
+        self.tab_widget.setCurrentIndex(0)
+
         # Set initial values based on current action
         self._populate_current()
+
+        # Auto-focus the key recorder input
+        QtCore.QTimer.singleShot(50, self.recorder.setFocus)
 
         # Bottom buttons
         btn_box = QtWidgets.QDialogButtonBox(
@@ -232,13 +238,8 @@ class ButtonEditorDialog(QtWidgets.QDialog):
         layout.addWidget(btn_box)
 
     def _populate_current(self):
-        if self.action.behavior == 8 and self.action.action_type == 1:
+        if self.action.behavior == 8 and self.action.action_type == 2:
             self.tab_widget.setCurrentIndex(0)
-            idx = self.combo_mouse_button.findData(self.action.value)
-            if idx >= 0:
-                self.combo_mouse_button.setCurrentIndex(idx)
-        elif self.action.behavior == 8 and self.action.action_type == 2:
-            self.tab_widget.setCurrentIndex(1)
             idx = self.combo_key.findData(self.action.value)
             if idx >= 0:
                 self.combo_key.setCurrentIndex(idx)
@@ -247,6 +248,11 @@ class ButtonEditorDialog(QtWidgets.QDialog):
             self.chk_alt.setChecked(bool(self.action.modifiers & 0x44))
             self.chk_super.setChecked(bool(self.action.modifiers & 0x88))
             self.recorder.setText(self.action.display_name())
+        elif self.action.behavior == 8 and self.action.action_type == 1:
+            self.tab_widget.setCurrentIndex(1)
+            idx = self.combo_mouse_button.findData(self.action.value)
+            if idx >= 0:
+                self.combo_mouse_button.setCurrentIndex(idx)
         elif self.action.behavior == 9:
             self.tab_widget.setCurrentIndex(2)
             idx = self.combo_function.findData(self.action.value)
@@ -254,6 +260,8 @@ class ButtonEditorDialog(QtWidgets.QDialog):
                 self.combo_function.setCurrentIndex(idx)
         elif self.action.behavior in (15, 8) and self.action.action_type == 4:
             self.tab_widget.setCurrentIndex(3)
+        else:
+            self.tab_widget.setCurrentIndex(0)
 
     def _on_shortcut_captured(self, keycode: int, modifiers: int):
         idx = self.combo_key.findData(keycode)
