@@ -660,6 +660,19 @@ class MouseBackend:
             if not drv.open():
                 return False, "Could not open mouse on /dev/hidraw"
 
+            # Update sector 0 for profile enabled status
+            sec0_raw = drv.read_sector(0, 240)
+            if sec0_raw and len(sec0_raw) >= 32:
+                sec0_b = bytearray(sec0_raw)
+                for pid, prof in config.profiles.items():
+                    if 1 <= pid <= 5:
+                        offset = (pid - 1) * 4
+                        sec0_b[offset] = (pid >> 8) & 0xFF
+                        sec0_b[offset + 1] = pid & 0xFF
+                        sec0_b[offset + 2] = 1 if getattr(prof, "enabled", 1) else 0
+                        sec0_b[offset + 3] = 0
+                drv.write_sector(0, bytes(sec0_b))
+
             for pid, prof in config.profiles.items():
                 cur_sector = drv.read_sector(pid, 240)
                 sec_bytes = self._build_profile_sector(prof, cur_sector)
@@ -788,6 +801,7 @@ class MouseBackend:
             b[208:240] = b"\x00" * 32
 
             sec_bytes = bytes(b[:240])
+            drv.ensure_profile_enabled(slot_num)
             ok = drv.write_sector(slot_num, sec_bytes)
             if ok:
                 drv.set_active_profile(slot_num)

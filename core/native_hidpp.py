@@ -190,8 +190,26 @@ class NativeHIDPP:
                 return (p_resp[4] << 8) | p_resp[5]
         return 1
 
+    def ensure_profile_enabled(self, profile_num: int) -> bool:
+        """Ensures the profile slot is marked enabled in Sector 0 so firmware accepts switching."""
+        if not (1 <= profile_num <= 5):
+            return True
+        sec0 = self.read_sector(0, 240)
+        if not sec0 or len(sec0) < 32:
+            return False
+        offset = (profile_num - 1) * 4
+        if sec0[offset + 2] != 1:
+            sec0_b = bytearray(sec0)
+            sec0_b[offset] = (profile_num >> 8) & 0xFF
+            sec0_b[offset + 1] = profile_num & 0xFF
+            sec0_b[offset + 2] = 1
+            sec0_b[offset + 3] = 0
+            return self.write_sector(0, bytes(sec0_b))
+        return True
+
     def set_active_profile(self, profile_num: int, force_cycle: bool = True) -> bool:
         import time
+        self.ensure_profile_enabled(profile_num)
         idx = self.discover_feature(FEATURE_ONBOARD_PROFILES)
         if not idx:
             return False
