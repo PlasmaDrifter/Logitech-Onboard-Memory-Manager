@@ -299,10 +299,7 @@ class ButtonEditorDialog(QtWidgets.QDialog):
 
     def _on_accept(self):
         tab_idx = self.tab_widget.currentIndex()
-        if tab_idx == 0:  # Mouse Click
-            mask = self.combo_mouse_button.currentData()
-            self.result_action = ButtonAction.mouse_click(mask)
-        elif tab_idx == 1:  # Keyboard
+        if tab_idx == 0:  # Keyboard
             keycode = self.combo_key.currentData()
             mods = 0
             if self.chk_ctrl.isChecked():
@@ -314,6 +311,9 @@ class ButtonEditorDialog(QtWidgets.QDialog):
             if self.chk_super.isChecked():
                 mods |= MODIFIER_LEFT_GUI
             self.result_action = ButtonAction.key_shortcut(keycode, mods)
+        elif tab_idx == 1:  # Mouse Click
+            mask = self.combo_mouse_button.currentData()
+            self.result_action = ButtonAction.mouse_click(mask)
         elif tab_idx == 2:  # Function
             fid = self.combo_function.currentData()
             self.result_action = ButtonAction.function(fid)
