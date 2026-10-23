@@ -1,6 +1,6 @@
 # Logitech Onboard Memory Manager (Linux)
 
-A native Linux GUI and full **Logitech G HUB replacement** for Logitech gaming mice. Program button bindings, shortcuts, DPI stages, and hardware lighting directly into onboard flash memory without Windows or proprietary bloatware. Includes automatic per-game profile switching, dynamic hardware staging, an integrated game library scanner, and an optional background service to keep profiles synchronized when the app is closed.
+A native Linux GUI and full **Logitech G HUB replacement** for Logitech gaming mice. Program button bindings, shortcuts, and DPI stages directly into onboard flash memory with permanent hardware RGB shutoff, without Windows or proprietary bloatware. Includes automatic per-game profile switching, dynamic hardware staging, an integrated game library scanner, and an optional background service to keep profiles synchronized when the app is closed.
 
 ![Profile Editor View](assets/screenshot.png)
 
