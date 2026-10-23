@@ -75,6 +75,14 @@ To integrate into your KDE Plasma or GNOME desktop launcher:
 
 This creates a symlink in `~/.local/bin/logitech-onboard-gui`, installs the application icon, and adds the `.desktop` launcher.
 
+### Uninstallation
+
+To cleanly remove desktop integration, command launcher symlinks, and background services:
+
+```bash
+./uninstall.sh
+```
+
 ---
 
 ## Building
