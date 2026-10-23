@@ -6,47 +6,52 @@ BIN_DIR="${HOME}/.local/bin"
 APP_DIR="${HOME}/.local/share/applications"
 ICON_DIR="${HOME}/.local/share/icons/hicolor/scalable/apps"
 SERVICE_DIR="${HOME}/.config/systemd/user"
-SERVICE_NAME="logitech-omm-watcher.service"
+SERVICE_NAMES=("omm-linux-watcher.service" "logitech-omm-watcher.service")
 
-echo "Uninstalling Logitech Onboard Memory Manager..."
+echo "Uninstalling OMM Linux..."
 
-# 1. Stop and disable background service if running
+# 1. Stop and disable background services if running
 if command -v systemctl >/dev/null 2>&1; then
-    if systemctl --user is-active --quiet "${SERVICE_NAME}" 2>/dev/null; then
-        echo "Stopping background watcher service..."
-        systemctl --user stop "${SERVICE_NAME}" 2>/dev/null || true
+    for s_name in "${SERVICE_NAMES[@]}"; do
+        if systemctl --user is-active --quiet "${s_name}" 2>/dev/null; then
+            echo "Stopping background watcher service (${s_name})..."
+            systemctl --user stop "${s_name}" 2>/dev/null || true
+        fi
+        if systemctl --user is-enabled --quiet "${s_name}" 2>/dev/null; then
+            echo "Disabling background watcher service (${s_name})..."
+            systemctl --user disable "${s_name}" 2>/dev/null || true
+        fi
+        if [ -f "${SERVICE_DIR}/${s_name}" ]; then
+            rm -f "${SERVICE_DIR}/${s_name}"
+            echo "Removed systemd unit: ${SERVICE_DIR}/${s_name}"
+        fi
+    done
+    systemctl --user daemon-reload 2>/dev/null || true
+fi
+
+# 2. Remove command launchers
+for bin_name in "omm-linux" "logitech-onboard-gui"; do
+    if [ -L "${BIN_DIR}/${bin_name}" ] || [ -f "${BIN_DIR}/${bin_name}" ]; then
+        rm -f "${BIN_DIR}/${bin_name}"
+        echo "Removed command link: ${BIN_DIR}/${bin_name}"
     fi
-    if systemctl --user is-enabled --quiet "${SERVICE_NAME}" 2>/dev/null; then
-        echo "Disabling background watcher service..."
-        systemctl --user disable "${SERVICE_NAME}" 2>/dev/null || true
+done
+
+# 3. Remove .desktop entries
+for desk_name in "omm-linux.desktop" "logitech-onboard.desktop"; do
+    if [ -f "${APP_DIR}/${desk_name}" ]; then
+        rm -f "${APP_DIR}/${desk_name}"
+        echo "Removed desktop entry: ${APP_DIR}/${desk_name}"
     fi
-fi
+done
 
-if [ -f "${SERVICE_DIR}/${SERVICE_NAME}" ]; then
-    rm -f "${SERVICE_DIR}/${SERVICE_NAME}"
-    echo "Removed systemd unit: ${SERVICE_DIR}/${SERVICE_NAME}"
-    if command -v systemctl >/dev/null 2>&1; then
-        systemctl --user daemon-reload 2>/dev/null || true
+# 4. Remove icons
+for icon_name in "omm-linux.svg" "logitech-onboard.svg"; do
+    if [ -f "${ICON_DIR}/${icon_name}" ]; then
+        rm -f "${ICON_DIR}/${icon_name}"
+        echo "Removed icon: ${ICON_DIR}/${icon_name}"
     fi
-fi
-
-# 2. Remove command launcher
-if [ -L "${BIN_DIR}/logitech-onboard-gui" ] || [ -f "${BIN_DIR}/logitech-onboard-gui" ]; then
-    rm -f "${BIN_DIR}/logitech-onboard-gui"
-    echo "Removed command link: ${BIN_DIR}/logitech-onboard-gui"
-fi
-
-# 3. Remove .desktop entry
-if [ -f "${APP_DIR}/logitech-onboard.desktop" ]; then
-    rm -f "${APP_DIR}/logitech-onboard.desktop"
-    echo "Removed desktop entry: ${APP_DIR}/logitech-onboard.desktop"
-fi
-
-# 4. Remove icon
-if [ -f "${ICON_DIR}/logitech-onboard.svg" ]; then
-    rm -f "${ICON_DIR}/logitech-onboard.svg"
-    echo "Removed icon: ${ICON_DIR}/logitech-onboard.svg"
-fi
+done
 
 # 5. Refresh icon and desktop caches if utilities are available
 if command -v update-desktop-database >/dev/null 2>&1; then
@@ -58,4 +63,4 @@ if command -v gtk-update-icon-cache >/dev/null 2>&1; then
 fi
 
 echo "Uninstallation complete."
-echo "Note: User configuration and profile files in ~/.config/logitech-onboard were preserved."
+echo "Note: User configuration and profile files in ~/.config/omm-linux were preserved."

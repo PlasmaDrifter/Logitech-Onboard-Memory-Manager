@@ -141,7 +141,7 @@ class RuleEditDialog(QtWidgets.QDialog):
         else:
             # Slot 5 dynamic
             self.combo_profile.setEnabled(True)
-            self.combo_profile.setToolTip("Profile from ~/.config/logitech-onboard/library/ to flash into Slot 5.")
+            self.combo_profile.setToolTip("Profile from ~/.config/omm-linux/library/ to flash into Slot 5.")
             self.lbl_profile_hint.setText("Stages this profile from disk into Slot 5 when this game is focused.")
 
     def _on_capture_window(self):

@@ -9,20 +9,26 @@ ICON_DIR="${HOME}/.local/share/icons/hicolor/scalable/apps"
 
 mkdir -p "${BIN_DIR}" "${APP_DIR}" "${ICON_DIR}"
 
-echo "Installing Logitech Onboard Memory Manager..."
+echo "Installing OMM Linux..."
+
+# Clean up legacy files if present
+rm -f "${BIN_DIR}/logitech-onboard-gui" "${APP_DIR}/logitech-onboard.desktop" "${ICON_DIR}/logitech-onboard.svg"
 
 # 1. Install application launcher script
-ln -sf "${SCRIPT_DIR}/main.py" "${BIN_DIR}/logitech-onboard-gui"
-chmod +x "${BIN_DIR}/logitech-onboard-gui"
-echo "Created command link: ${BIN_DIR}/logitech-onboard-gui"
+ln -sf "${SCRIPT_DIR}/main.py" "${BIN_DIR}/omm-linux"
+chmod +x "${BIN_DIR}/omm-linux"
+echo "Created command link: ${BIN_DIR}/omm-linux"
+
+# Also provide compatibility symlink
+ln -sf "${BIN_DIR}/omm-linux" "${BIN_DIR}/logitech-onboard-gui"
 
 # 2. Install SVG icon
-cp "${SCRIPT_DIR}/assets/icon.svg" "${ICON_DIR}/logitech-onboard.svg"
-echo "Installed icon to: ${ICON_DIR}/logitech-onboard.svg"
+cp "${SCRIPT_DIR}/assets/icon.svg" "${ICON_DIR}/omm-linux.svg"
+echo "Installed icon to: ${ICON_DIR}/omm-linux.svg"
 
 # 3. Install .desktop entry
-cp "${SCRIPT_DIR}/assets/logitech-onboard.desktop" "${APP_DIR}/logitech-onboard.desktop"
-echo "Installed desktop entry to: ${APP_DIR}/logitech-onboard.desktop"
+cp "${SCRIPT_DIR}/assets/omm-linux.desktop" "${APP_DIR}/omm-linux.desktop"
+echo "Installed desktop entry to: ${APP_DIR}/omm-linux.desktop"
 
 # 4. Refresh icon and desktop caches if utilities are available
 if command -v update-desktop-database >/dev/null 2>&1; then
@@ -34,5 +40,5 @@ if command -v gtk-update-icon-cache >/dev/null 2>&1; then
 fi
 
 echo "Installation complete!"
-echo "You can launch it anytime by running: logitech-onboard-gui"
-echo "Or searching for 'Logitech Onboard Memory Manager' in your application menu."
+echo "You can launch it anytime by running: omm-linux"
+echo "Or searching for 'OMM Linux' in your application menu."

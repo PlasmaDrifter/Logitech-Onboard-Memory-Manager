@@ -56,7 +56,7 @@ class WorkerThread(QtCore.QThread):
             self.finished_signal.emit(False, str(e))
 
 
-APP_VERSION = "v0.9.3"
+APP_VERSION = "v0.9.4"
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -67,7 +67,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.current_gshift_mode = False
         self.current_model_key = "g502"
 
-        self.qsettings = QtCore.QSettings("LogitechLinux", "OnboardMemoryManager")
+        self.qsettings = QtCore.QSettings("OMMLinux", "OMMLinux")
+        # Migrate old settings if new is empty
+        old_settings = QtCore.QSettings("LogitechLinux", "OnboardMemoryManager")
+        if not self.qsettings.allKeys() and old_settings.allKeys():
+            for key in old_settings.allKeys():
+                self.qsettings.setValue(key, old_settings.value(key))
+
         self.force_quit = False
         self.tray_icon: Optional[QtWidgets.QSystemTrayIcon] = None
         self.tray_profile_actions = {}
@@ -77,7 +83,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if not BackgroundServiceManager.is_running():
             self.watcher.start()
 
-        self.setWindowTitle(f"Logitech Onboard Memory Manager {APP_VERSION}")
+        self.setWindowTitle(f"OMM Linux {APP_VERSION}")
         self.resize(1180, 760)
 
         icon_path = Path(__file__).resolve().parent.parent / "assets" / "icon.svg"
@@ -105,11 +111,11 @@ class MainWindow(QtWidgets.QMainWindow):
             event.ignore()
             self.hide()
             if hasattr(self, "action_show_hide"):
-                self.action_show_hide.setText("Show Logitech OMM")
+                self.action_show_hide.setText("Show OMM Linux")
             hint_shown = self.qsettings.value("tray_hint_shown", False, type=bool)
             if not hint_shown:
                 self.tray_icon.showMessage(
-                    "Logitech Onboard Memory Manager",
+                    "OMM Linux",
                     "Application is minimized to the system tray.",
                     QtWidgets.QSystemTrayIcon.MessageIcon.Information,
                     2500
@@ -128,19 +134,19 @@ class MainWindow(QtWidgets.QMainWindow):
         if event.type() == QtCore.QEvent.Type.WindowStateChange:
             if hasattr(self, "action_show_hide"):
                 if self.isMinimized() or not self.isVisible():
-                    self.action_show_hide.setText("Show Logitech OMM")
+                    self.action_show_hide.setText("Show OMM Linux")
                 else:
-                    self.action_show_hide.setText("Hide Logitech OMM")
+                    self.action_show_hide.setText("Hide OMM Linux")
 
     def hideEvent(self, event: QtGui.QHideEvent):
         super().hideEvent(event)
         if hasattr(self, "action_show_hide"):
-            self.action_show_hide.setText("Show Logitech OMM")
+            self.action_show_hide.setText("Show OMM Linux")
 
     def showEvent(self, event: QtGui.QShowEvent):
         super().showEvent(event)
         if hasattr(self, "action_show_hide"):
-            self.action_show_hide.setText("Hide Logitech OMM")
+            self.action_show_hide.setText("Hide OMM Linux")
 
     def _setup_styling(self):
         self.setStyleSheet("""
@@ -247,7 +253,7 @@ class MainWindow(QtWidgets.QMainWindow):
         title_box = QtWidgets.QVBoxLayout()
         
         app_title_row = QtWidgets.QHBoxLayout()
-        self.app_title_lbl = QtWidgets.QLabel("Logitech Onboard Memory Manager")
+        self.app_title_lbl = QtWidgets.QLabel("OMM Linux")
         self.app_title_lbl.setStyleSheet("font-size: 16px; font-weight: bold; color: #ffffff;")
         self.version_badge = QtWidgets.QLabel(f" {APP_VERSION} ")
         self.version_badge.setStyleSheet(
@@ -355,11 +361,11 @@ class MainWindow(QtWidgets.QMainWindow):
         icon = QtGui.QIcon(str(tray_icon_path)) if tray_icon_path.exists() else self.windowIcon()
 
         self.tray_icon = QtWidgets.QSystemTrayIcon(icon, self)
-        self.tray_icon.setToolTip("Logitech Onboard Memory Manager")
+        self.tray_icon.setToolTip("OMM Linux")
 
         tray_menu = QtWidgets.QMenu(self)
 
-        self.action_show_hide = QtGui.QAction("Hide Logitech OMM", self)
+        self.action_show_hide = QtGui.QAction("Hide OMM Linux", self)
         self.action_show_hide.triggered.connect(self._toggle_visibility)
         tray_menu.addAction(self.action_show_hide)
 
@@ -413,13 +419,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.raise_()
         self.activateWindow()
         if hasattr(self, "action_show_hide"):
-            self.action_show_hide.setText("Hide Logitech OMM")
+            self.action_show_hide.setText("Hide OMM Linux")
 
     def _toggle_visibility(self):
         if self.isVisible() and not self.isMinimized():
             self.hide()
             if hasattr(self, "action_show_hide"):
-                self.action_show_hide.setText("Show Logitech OMM")
+                self.action_show_hide.setText("Show OMM Linux")
         else:
             self.present_to_user()
 
@@ -469,7 +475,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 act.setChecked(pid == active_pid)
                 act.blockSignals(False)
         if self.tray_icon:
-            self.tray_icon.setToolTip(f"Logitech Onboard Memory Manager (Profile {active_pid})")
+            self.tray_icon.setToolTip(f"OMM Linux (Profile {active_pid})")
 
     def on_open_rgb_dialog(self):
         dlg = RGBLightingDialog(self.backend, self)

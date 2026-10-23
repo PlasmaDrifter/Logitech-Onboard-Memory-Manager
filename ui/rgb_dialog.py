@@ -22,7 +22,11 @@ class RGBLightingDialog(QtWidgets.QDialog):
         self.setWindowTitle("Hardware RGB Lighting")
         self.resize(520, 520)
 
-        self.qsettings = QtCore.QSettings("LogitechLinux", "OnboardMemoryManager")
+        self.qsettings = QtCore.QSettings("OMMLinux", "OMMLinux")
+        old_settings = QtCore.QSettings("LogitechLinux", "OnboardMemoryManager")
+        if not self.qsettings.allKeys() and old_settings.allKeys():
+            for key in old_settings.allKeys():
+                self.qsettings.setValue(key, old_settings.value(key))
 
         # Load saved preferences or defaults
         self.current_effect = self.qsettings.value("rgb_effect_mode", "static", type=str)

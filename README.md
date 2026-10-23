@@ -1,6 +1,6 @@
-# Logitech Onboard Memory Manager (Linux)
+# OMM Linux
 
-A native Linux GUI and full **Logitech G HUB replacement** for Logitech gaming mice. Program button bindings, shortcuts, and DPI stages directly into onboard flash memory with permanent hardware RGB shutoff, without Windows or proprietary bloatware. Includes automatic per-game profile switching, dynamic hardware staging, an integrated game library scanner, and an optional background service to keep profiles synchronized when the app is closed.
+A native Linux Onboard Memory Manager and full **Logitech G HUB replacement** for gaming mice. Program button bindings, shortcuts, and DPI stages directly into onboard flash memory with permanent hardware RGB shutoff, without Windows or proprietary bloatware. Includes automatic per-game profile switching, dynamic hardware staging, an integrated game library scanner, and an optional background service to keep profiles synchronized when the app is closed.
 
 ![Profile Editor View](assets/screenshot.png)
 
@@ -22,7 +22,7 @@ A native Linux GUI and full **Logitech G HUB replacement** for Logitech gaming m
   - Dynamic Staging (Slot 5): Instantly flashes game profiles into slot 5 on demand, allowing unlimited game profiles while keeping slots 1-4 intact.
   - Auto-Desktop Return: Instantly returns to your configured default desktop slot upon alt-tabbing or quitting a game.
 - **Background Watcher Service**:
-  - Optional systemd user daemon (`logitech-omm-watcher.service`) keeps auto-switching active in the background even when the GUI is closed.
+  - Optional systemd user daemon (`omm-linux-watcher.service`) keeps auto-switching active in the background even when the GUI is closed.
   - In-app service dashboard with live status badge, Start/Stop toggle, and auto-start on boot configuration.
 - **Installed Game Scanner**:
   - One-click scanning for games across Steam, Lutris, and Heroic with filter search and instant rule creation.
@@ -47,8 +47,8 @@ A native Linux GUI and full **Logitech G HUB replacement** for Logitech gaming m
 Download the latest standalone executable from the [Releases](https://github.com/PlasmaDrifter/Logitech-Onboard-Memory-Manager/releases) page:
 
 ```bash
-chmod +x Logitech-Onboard-Memory-Manager-x86_64.AppImage
-./Logitech-Onboard-Memory-Manager-x86_64.AppImage
+chmod +x OMM-Linux-v0.9.4-x86_64.AppImage
+./OMM-Linux-v0.9.4-x86_64.AppImage
 ```
 
 ### Option 2: Running from Source
@@ -69,7 +69,7 @@ To integrate into your KDE Plasma or GNOME desktop launcher:
 ./install.sh
 ```
 
-This creates a symlink in `~/.local/bin/logitech-onboard-gui`, installs the application icon, and adds the `.desktop` launcher.
+This creates a symlink in `~/.local/bin/omm-linux`, installs the application icon, and adds the `.desktop` launcher.
 
 ### Uninstallation
 
@@ -87,13 +87,13 @@ To cleanly remove desktop integration, command launcher symlinks, and background
 ```bash
 ./build_appimage.sh
 ```
-The output file will be generated in `dist/Logitech-Onboard-Memory-Manager-x86_64.AppImage`.
+The output file will be generated in `dist/OMM-Linux-v0.9.4-x86_64.AppImage`.
 
 ### Building a Standalone Binary
 ```bash
 ./build_standalone.sh
 ```
-The single-file binary will be generated in `dist/logitech-onboard-gui`.
+The single-file binary will be generated in `dist/omm-linux`.
 
 ---
 

@@ -6,6 +6,8 @@ from pathlib import Path
 from dataclasses import dataclass, asdict, field
 from typing import List, Dict, Optional, Any
 
+from .backend import get_config_dir
+
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -29,7 +31,7 @@ class ProfileLibraryManager:
 
     def __init__(self, base_dir: Optional[Path] = None):
         if base_dir is None:
-            self.base_dir = Path.home() / ".config" / "logitech-onboard"
+            self.base_dir = get_config_dir()
         else:
             self.base_dir = Path(base_dir)
 

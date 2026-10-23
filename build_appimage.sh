@@ -10,7 +10,7 @@ echo "Building standalone binary via PyInstaller..."
 mkdir -p "${DIST_DIR}"
 
 pyinstaller \
-    --name="logitech-onboard-gui" \
+    --name="omm-linux" \
     --onefile \
     --windowed \
     --clean \
@@ -29,11 +29,12 @@ mkdir -p "${APP_DIR}/usr/bin"
 mkdir -p "${APP_DIR}/usr/share/icons/hicolor/scalable/apps"
 mkdir -p "${APP_DIR}/usr/share/applications"
 
-cp "${DIST_DIR}/logitech-onboard-gui" "${APP_DIR}/usr/bin/"
-cp "${SCRIPT_DIR}/assets/icon.svg" "${APP_DIR}/usr/share/icons/hicolor/scalable/apps/logitech-onboard.svg"
-cp "${SCRIPT_DIR}/assets/icon.svg" "${APP_DIR}/logitech-onboard.svg"
-cp "${SCRIPT_DIR}/assets/logitech-onboard.desktop" "${APP_DIR}/usr/share/applications/"
-cp "${SCRIPT_DIR}/assets/logitech-onboard.desktop" "${APP_DIR}/logitech-onboard.desktop"
+cp "${DIST_DIR}/omm-linux" "${APP_DIR}/usr/bin/"
+cp "${SCRIPT_DIR}/assets/icon.svg" "${APP_DIR}/usr/share/icons/hicolor/scalable/apps/omm-linux.svg"
+cp "${SCRIPT_DIR}/assets/icon.svg" "${APP_DIR}/omm-linux.svg"
+cp "${SCRIPT_DIR}/assets/icon.svg" "${APP_DIR}/.DirIcon"
+cp "${SCRIPT_DIR}/assets/omm-linux.desktop" "${APP_DIR}/usr/share/applications/"
+cp "${SCRIPT_DIR}/assets/omm-linux.desktop" "${APP_DIR}/omm-linux.desktop"
 
 # Create AppRun
 cat << 'RUN' > "${APP_DIR}/AppRun"
@@ -41,7 +42,7 @@ cat << 'RUN' > "${APP_DIR}/AppRun"
 SELF=$(readlink -f "$0")
 HERE=${SELF%/*}
 export PATH="${HERE}/usr/bin:${PATH}"
-exec "${HERE}/usr/bin/logitech-onboard-gui" "$@"
+exec "${HERE}/usr/bin/omm-linux" "$@"
 RUN
 chmod +x "${APP_DIR}/AppRun"
 
@@ -53,8 +54,8 @@ if [ ! -x "${APPIMAGETOOL}" ]; then
     exit 1
 fi
 
-VERSION="${1:-v0.8.1}"
-OUTPUT_NAME="Logitech-Onboard-Memory-Manager-${VERSION}-x86_64.AppImage"
+VERSION="${1:-v0.9.4}"
+OUTPUT_NAME="OMM-Linux-${VERSION}-x86_64.AppImage"
 rm -f "${DIST_DIR}/${OUTPUT_NAME}"
 ARCH=x86_64 "${APPIMAGETOOL}" "${APP_DIR}" "${DIST_DIR}/${OUTPUT_NAME}"
 

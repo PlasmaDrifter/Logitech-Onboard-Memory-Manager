@@ -108,8 +108,22 @@ def _setup_yaml():
 _setup_yaml()
 
 
+def get_config_dir() -> Path:
+    """Returns the base configuration directory, migrating ~/.config/logitech-onboard if needed."""
+    new_dir = Path.home() / ".config" / "omm-linux"
+    old_dir = Path.home() / ".config" / "logitech-onboard"
+    if not new_dir.exists() and old_dir.exists():
+        try:
+            import shutil
+            shutil.copytree(old_dir, new_dir)
+        except Exception:
+            return old_dir
+    new_dir.mkdir(parents=True, exist_ok=True)
+    return new_dir
+
+
 def get_backup_dir() -> Path:
-    config_dir = Path.home() / ".config" / "logitech-onboard" / "backups"
+    config_dir = get_config_dir() / "backups"
     config_dir.mkdir(parents=True, exist_ok=True)
     return config_dir
 
@@ -223,7 +237,7 @@ class MouseBackend:
         # Check flatpak
         res = subprocess.run(["which", "flatpak"], capture_output=True, text=True)
         if res.returncode == 0:
-            config_dir = Path.home() / ".config" / "logitech-onboard"
+            config_dir = get_config_dir()
             return ["flatpak", "run", f"--filesystem={config_dir}", "--command=solaar", "io.github.pwr_solaar.solaar"]
         return ["solaar"]
 
@@ -242,7 +256,9 @@ class MouseBackend:
     def enforce_lighting_state(self, drv: Optional[NativeHIDPP] = None, force_auto_off: Optional[bool] = None) -> bool:
         """Enforces the user's configured RGB lighting preference (e.g. keeping RGB off or applying active effect)."""
         import configparser
-        conf_path = Path.home() / ".config" / "LogitechLinux" / "OnboardMemoryManager.conf"
+        conf_path = Path.home() / ".config" / "OMMLinux" / "OMMLinux.conf"
+        if not conf_path.exists():
+            conf_path = Path.home() / ".config" / "LogitechLinux" / "OnboardMemoryManager.conf"
         auto_off = False
         effect_mode = "off"
         color_hex = "#00aeef"

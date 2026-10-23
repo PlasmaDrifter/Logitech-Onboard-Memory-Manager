@@ -1,15 +1,16 @@
-"""Systemd user service manager for Logitech OMM background auto-switching daemon."""
+"""Systemd user service manager for OMM Linux background auto-switching daemon."""
 
 import os
 import subprocess
 from pathlib import Path
 from typing import Tuple
 
-SERVICE_NAME = "logitech-omm-watcher.service"
+SERVICE_NAME = "omm-linux-watcher.service"
+OLD_SERVICE_NAME = "logitech-omm-watcher.service"
 
 
 class BackgroundServiceManager:
-    """Manages the logitech-omm-watcher systemd user service."""
+    """Manages the omm-linux-watcher systemd user service."""
 
     @staticmethod
     def get_service_file_path() -> Path:
@@ -17,14 +18,23 @@ class BackgroundServiceManager:
 
     @staticmethod
     def ensure_service_installed() -> bool:
-        """Installs or updates the systemd user service unit file."""
+        """Installs or updates the systemd user service unit file and cleans up legacy service."""
+        old_service_path = Path.home() / ".config" / "systemd" / "user" / OLD_SERVICE_NAME
+        if old_service_path.exists():
+            try:
+                subprocess.run(["systemctl", "--user", "stop", OLD_SERVICE_NAME], capture_output=True, timeout=5)
+                subprocess.run(["systemctl", "--user", "disable", OLD_SERVICE_NAME], capture_output=True, timeout=5)
+                old_service_path.unlink(missing_ok=True)
+            except Exception:
+                pass
+
         service_path = BackgroundServiceManager.get_service_file_path()
         service_path.parent.mkdir(parents=True, exist_ok=True)
 
-        appimage_path = "%h/Applications/Logitech Onboard Memory Manager"
+        appimage_path = "%h/Applications/OMM Linux"
 
         unit_content = f"""[Unit]
-Description=Logitech OMM Profile Auto-Switching Watcher
+Description=OMM Linux Profile Auto-Switching Watcher
 After=graphical-session.target
 
 [Service]

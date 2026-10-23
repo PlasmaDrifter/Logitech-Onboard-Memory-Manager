@@ -1,64 +1,32 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
   <defs>
-    <!-- Dark slate squircle background -->
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#1e222b"/>
-      <stop offset="100%" stop-color="#0f1117"/>
+    <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#0369a1"/>
     </linearGradient>
-
-    <!-- Titanium metallic body fill -->
-    <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#3b4252"/>
-      <stop offset="100%" stop-color="#242933"/>
-    </linearGradient>
-
-    <!-- Silver wheel & chip accent -->
-    <linearGradient id="silverGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#d8dee9"/>
-      <stop offset="100%" stop-color="#8892b0"/>
-    </linearGradient>
-
-    <!-- Muted cyan-steel LED / core dot -->
-    <linearGradient id="coreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#81a1c1"/>
-      <stop offset="100%" stop-color="#5e81ac"/>
-    </linearGradient>
+    <filter id="shadowGrad" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
   </defs>
-
-  <!-- Base Plate -->
-  <rect x="8" y="8" width="112" height="112" rx="26" fill="url(#bgGrad)" stroke="#434c5e" stroke-width="2"/>
-
-  <!-- Mouse Silhouette Shadow/Glow -->
-  <path d="M 64 20 C 46 20, 34 36, 34 60 C 34 85, 45 106, 64 106 C 83 106, 94 85, 94 60 C 94 36, 82 20, 64 20 Z"
-        fill="url(#bodyGrad)" stroke="#8892b0" stroke-width="2.5" stroke-linejoin="round"/>
-
-  <!-- Ergonomic parting line -->
-  <line x1="64" y1="21" x2="64" y2="44" stroke="#8892b0" stroke-width="2"/>
-
-  <!-- Scroll Wheel (Brushed Silver) -->
-  <rect x="58" y="28" width="12" height="24" rx="6" fill="#1e222b" stroke="#eceff4" stroke-width="1.8"/>
-  <line x1="60" y1="34" x2="68" y2="34" stroke="#d8dee9" stroke-width="1.5"/>
-  <line x1="60" y1="40" x2="68" y2="40" stroke="#d8dee9" stroke-width="1.5"/>
-  <line x1="60" y1="46" x2="68" y2="46" stroke="#d8dee9" stroke-width="1.5"/>
-
-  <!-- Thumb Rest / Side Flare -->
-  <path d="M 34 48 C 28 50, 26 57, 26 66 C 26 75, 29 82, 34 84" 
-        fill="none" stroke="#d8dee9" stroke-width="3" stroke-linecap="round"/>
-
-  <!-- Top Side Buttons (G7 / G8 profile) -->
-  <path d="M 43 32 L 46 44" stroke="#d8dee9" stroke-width="2.5" stroke-linecap="round"/>
-  <path d="M 39 37 L 42 48" stroke="#8892b0" stroke-width="2" stroke-linecap="round"/>
-
-  <!-- Onboard Memory Microchip (Clean Silver & Slate) -->
-  <rect x="51" y="67" width="26" height="20" rx="4" fill="#1b1f27" stroke="#eceff4" stroke-width="1.8"/>
-  <circle cx="64" cy="77" r="3" fill="url(#coreGrad)"/>
-
-  <!-- Chip Pins (Bright silver) -->
-  <line x1="46" y1="71" x2="51" y2="71" stroke="#d8dee9" stroke-width="2" stroke-linecap="round"/>
-  <line x1="46" y1="77" x2="51" y2="77" stroke="#d8dee9" stroke-width="2" stroke-linecap="round"/>
-  <line x1="46" y1="83" x2="51" y2="83" stroke="#d8dee9" stroke-width="2" stroke-linecap="round"/>
-
-  <line x1="77" y1="71" x2="82" y2="71" stroke="#d8dee9" stroke-width="2" stroke-linecap="round"/>
-  <line x1="77" y1="77" x2="82" y2="77" stroke="#d8dee9" stroke-width="2" stroke-linecap="round"/>
-  <line x1="77" y1="83" x2="82" y2="83" stroke="#d8dee9" stroke-width="2" stroke-linecap="round"/>
+  <!-- Transparent Floating Silhouette Icon -->
+  <g filter="url(#shadowGrad)">
+    <path d="M 64 16 C 44 16, 32 34, 32 60 C 32 87, 44 110, 64 110 C 84 110, 96 87, 96 60 C 96 34, 84 16, 64 16 Z"
+          fill="url(#bodyGrad)" stroke="#38bdf8" stroke-width="3" stroke-linejoin="round"/>
+    <line x1="64" y1="17" x2="64" y2="44" stroke="#7dd3fc" stroke-width="2.5"/>
+    <rect x="58" y="26" width="12" height="24" rx="6" fill="#0c4a6e" stroke="#ffffff" stroke-width="2"/>
+    <line x1="60" y1="32" x2="68" y2="32" stroke="#38bdf8" stroke-width="1.8"/>
+    <line x1="60" y1="38" x2="68" y2="38" stroke="#38bdf8" stroke-width="1.8"/>
+    <line x1="60" y1="44" x2="68" y2="44" stroke="#38bdf8" stroke-width="1.8"/>
+    <path d="M 32 46 C 25 48, 23 56, 23 66 C 23 76, 26 84, 32 86" fill="none" stroke="#38bdf8" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M 42 30 L 45 42" stroke="#ffffff" stroke-width="2.8" stroke-linecap="round"/>
+    <path d="M 38 35 L 41 46" stroke="#7dd3fc" stroke-width="2.2" stroke-linecap="round"/>
+    <rect x="50" y="68" width="28" height="22" rx="5" fill="#082f49" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="64" cy="79" r="4" fill="#38bdf8"/>
+    <line x1="44" y1="73" x2="50" y2="73" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round"/>
+    <line x1="44" y1="79" x2="50" y2="79" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round"/>
+    <line x1="44" y1="85" x2="50" y2="85" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round"/>
+    <line x1="78" y1="73" x2="84" y2="73" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round"/>
+    <line x1="78" y1="79" x2="84" y2="79" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round"/>
+    <line x1="78" y1="85" x2="84" y2="85" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round"/>
+  </g>
 </svg>
