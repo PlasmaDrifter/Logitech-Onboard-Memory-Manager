@@ -65,7 +65,7 @@ def main():
     except ImportError:
         from PyQt6.QtNetwork import QLocalServer, QLocalSocket
 
-    server_name = f"omm-linux-single-{os.getuid()}"
+    server_name = f"omm-single-{os.getuid()}"
 
     # Single-instance check: check if an existing GUI instance is already running
     test_socket = QLocalSocket()
@@ -84,9 +84,9 @@ def main():
     server.listen(server_name)
 
     app = QtWidgets.QApplication(sys.argv)
-    app.setApplicationName("OMM Linux")
-    app.setDesktopFileName("omm-linux")
-    app.setOrganizationName("OMMLinux")
+    app.setApplicationName("OMM")
+    app.setDesktopFileName("omm")
+    app.setOrganizationName("OMM")
 
     window = MainWindow()
     window.show()

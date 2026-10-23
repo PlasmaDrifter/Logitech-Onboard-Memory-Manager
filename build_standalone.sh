@@ -10,7 +10,7 @@ echo "Building standalone portable binary for fresh Linux installations..."
 mkdir -p "${DIST_DIR}"
 
 pyinstaller \
-    --name="omm-linux" \
+    --name="omm" \
     --onefile \
     --windowed \
     --clean \
@@ -21,5 +21,5 @@ pyinstaller \
     "${SCRIPT_DIR}/main.py"
 
 echo "Build finished successfully!"
-echo "Standalone binary located at: ${DIST_DIR}/omm-linux"
+echo "Standalone binary located at: ${DIST_DIR}/omm"
 echo "This single file can be copied to any fresh Linux PC and executed directly."

@@ -132,7 +132,7 @@ class RuleEditDialog(QtWidgets.QDialog):
         else:
             # Slot 5 dynamic
             self.edit_profile.setEnabled(True)
-            self.edit_profile.setToolTip("Dedicated profile JSON in ~/.config/omm-linux/library/ staged into Slot 5.")
+            self.edit_profile.setToolTip("Dedicated profile JSON in profile library staged into Slot 5.")
             if self.is_new:
                 self.lbl_profile_hint.setText("A dedicated, new profile JSON will be created in your library for this rule.")
             else:

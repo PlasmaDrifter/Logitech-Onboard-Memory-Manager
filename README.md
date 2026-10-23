@@ -1,6 +1,6 @@
-# OMM Linux
+# OMM
 
-A native Linux Onboard Memory Manager and full **Logitech G HUB replacement** for gaming mice. Program button bindings, shortcuts, and DPI stages directly into onboard flash memory with permanent hardware RGB shutoff, without Windows or proprietary bloatware. Includes automatic per-game profile switching, dynamic hardware staging, an integrated game library scanner, and an optional background service to keep profiles synchronized when the app is closed.
+A native Onboard Memory Manager and full **Logitech G HUB replacement** for gaming mice. Program button bindings, shortcuts, and DPI stages directly into onboard flash memory with permanent hardware RGB shutoff, without Windows or proprietary bloatware. Includes automatic per-game profile switching, dynamic hardware staging, an integrated game and desktop application library scanner, and an optional background service to keep profiles synchronized when the app is closed.
 
 ![Profile Editor View](assets/screenshot.png)
 
@@ -22,10 +22,10 @@ A native Linux Onboard Memory Manager and full **Logitech G HUB replacement** fo
   - Dynamic Staging (Slot 5): Instantly flashes game profiles into slot 5 on demand, allowing unlimited game profiles while keeping slots 1-4 intact.
   - Auto-Desktop Return: Instantly returns to your configured default desktop slot upon alt-tabbing or quitting a game.
 - **Background Watcher Service**:
-  - Optional systemd user daemon (`omm-linux-watcher.service`) keeps auto-switching active in the background even when the GUI is closed.
+  - Optional systemd user daemon (`omm-watcher.service`) keeps auto-switching active in the background even when the GUI is closed.
   - In-app service dashboard with live status badge, Start/Stop toggle, and auto-start on boot configuration.
-- **Installed Game Scanner**:
-  - One-click scanning for games across Steam, Lutris, and Heroic with filter search and instant rule creation.
+- **Installed Game & Application Scanner**:
+  - One-click scanning for games (Steam, Lutris, Heroic) and desktop applications (FreeDesktop, Flatpak, Snap) with filter search, view toggles, and instant rule creation.
 - **Physical Button Remapping**:
   - Standard Mouse Buttons (Left, Right, Middle, Back, Forward, Extra buttons)
   - Keyboard Shortcuts & Standalone Modifiers (Interactive recorder capturing single keys, standalone modifiers like Shift/Ctrl/Alt/Super, or complex combinations)
@@ -47,8 +47,8 @@ A native Linux Onboard Memory Manager and full **Logitech G HUB replacement** fo
 Download the latest standalone executable from the [Releases](https://github.com/PlasmaDrifter/OMM-Linux/releases) page:
 
 ```bash
-chmod +x OMM-Linux-v0.9.5-x86_64.AppImage
-./OMM-Linux-v0.9.5-x86_64.AppImage
+chmod +x OMM-v0.9.6-x86_64.AppImage
+./OMM-v0.9.6-x86_64.AppImage
 ```
 
 ### Option 2: Running from Source
@@ -63,13 +63,13 @@ cd OMM-Linux
 
 ### Option 3: Desktop Menu Integration
 
-To integrate into your KDE Plasma or GNOME desktop launcher:
+To integrate into your desktop application launcher:
 
 ```bash
 ./install.sh
 ```
 
-This creates a symlink in `~/.local/bin/omm-linux`, installs the application icon, and adds the `.desktop` launcher.
+This creates a symlink in `~/.local/bin/omm`, installs the application icon, and adds the `.desktop` launcher.
 
 ### Uninstallation
 
@@ -87,13 +87,13 @@ To cleanly remove desktop integration, command launcher symlinks, and background
 ```bash
 ./build_appimage.sh
 ```
-The output file will be generated in `dist/OMM-Linux-v0.9.5-x86_64.AppImage`.
+The output file will be generated in `dist/OMM-v0.9.6-x86_64.AppImage`.
 
 ### Building a Standalone Binary
 ```bash
 ./build_standalone.sh
 ```
-The single-file binary will be generated in `dist/omm-linux`.
+The single-file binary will be generated in `dist/omm`.
 
 ---
 

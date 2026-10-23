@@ -9,31 +9,33 @@ ICON_DIR="${HOME}/.local/share/icons/hicolor/scalable/apps"
 
 mkdir -p "${BIN_DIR}" "${APP_DIR}" "${ICON_DIR}"
 
-echo "Installing OMM Linux..."
+echo "Installing OMM..."
 
 # Clean up legacy files if present
 rm -f "${BIN_DIR}/logitech-onboard-gui" "${APP_DIR}/logitech-onboard.desktop" "${ICON_DIR}/logitech-onboard.svg"
 
 # 1. Install application launcher script
-ln -sf "${SCRIPT_DIR}/main.py" "${BIN_DIR}/omm-linux"
-chmod +x "${BIN_DIR}/omm-linux"
-echo "Created command link: ${BIN_DIR}/omm-linux"
+ln -sf "${SCRIPT_DIR}/main.py" "${BIN_DIR}/omm"
+chmod +x "${BIN_DIR}/omm"
+echo "Created command link: ${BIN_DIR}/omm"
 
-# Also provide compatibility symlink
-ln -sf "${BIN_DIR}/omm-linux" "${BIN_DIR}/logitech-onboard-gui"
+# Provide compatibility symlinks
+ln -sf "${BIN_DIR}/omm" "${BIN_DIR}/omm-linux"
+ln -sf "${BIN_DIR}/omm" "${BIN_DIR}/logitech-onboard-gui"
 
 # 2. Install SVG icon
+cp "${SCRIPT_DIR}/assets/icon.svg" "${ICON_DIR}/omm.svg"
 cp "${SCRIPT_DIR}/assets/icon.svg" "${ICON_DIR}/omm-linux.svg"
-echo "Installed icon to: ${ICON_DIR}/omm-linux.svg"
+echo "Installed icon to: ${ICON_DIR}/omm.svg"
 
 # 3. Install .desktop entry (resolve absolute binary path for desktop environment launchers)
-sed -e "s|^Exec=.*|Exec=${BIN_DIR}/omm-linux|" \
-    -e "s|^Icon=.*|Icon=${ICON_DIR}/omm-linux.svg|" \
-    "${SCRIPT_DIR}/assets/omm-linux.desktop" > "${APP_DIR}/omm-linux.desktop"
-if ! grep -q "^Path=" "${APP_DIR}/omm-linux.desktop"; then
-    echo "Path=${SCRIPT_DIR}" >> "${APP_DIR}/omm-linux.desktop"
+sed -e "s|^Exec=.*|Exec=${BIN_DIR}/omm|" \
+    -e "s|^Icon=.*|Icon=${ICON_DIR}/omm.svg|" \
+    "${SCRIPT_DIR}/assets/omm.desktop" > "${APP_DIR}/omm.desktop"
+if ! grep -q "^Path=" "${APP_DIR}/omm.desktop"; then
+    echo "Path=${SCRIPT_DIR}" >> "${APP_DIR}/omm.desktop"
 fi
-echo "Installed desktop entry to: ${APP_DIR}/omm-linux.desktop"
+echo "Installed desktop entry to: ${APP_DIR}/omm.desktop"
 
 # 4. Refresh icon and desktop caches if utilities are available
 if command -v update-desktop-database >/dev/null 2>&1; then
@@ -51,11 +53,9 @@ if command -v gtk-update-icon-cache >/dev/null 2>&1; then
 fi
 
 # 5. Update background service unit if installed
-if [ -f "${HOME}/.config/systemd/user/omm-linux-watcher.service" ]; then
-    python3 -c "import sys; sys.path.insert(0, '${SCRIPT_DIR}'); from core.service_manager import BackgroundServiceManager; BackgroundServiceManager.ensure_service_installed()" >/dev/null 2>&1 || true
-    systemctl --user daemon-reload >/dev/null 2>&1 || true
-fi
+python3 -c "import sys; sys.path.insert(0, '${SCRIPT_DIR}'); from core.service_manager import BackgroundServiceManager; BackgroundServiceManager.ensure_service_installed()" >/dev/null 2>&1 || true
+systemctl --user daemon-reload >/dev/null 2>&1 || true
 
 echo "Installation complete!"
-echo "You can launch it anytime by running: omm-linux"
-echo "Or searching for 'OMM Linux' in your application menu."
+echo "You can launch it anytime by running: omm"
+echo "Or searching for 'OMM' in your application menu."

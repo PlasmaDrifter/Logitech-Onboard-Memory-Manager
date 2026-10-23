@@ -10,7 +10,7 @@ echo "Building standalone binary via PyInstaller..."
 mkdir -p "${DIST_DIR}"
 
 pyinstaller \
-    --name="omm-linux" \
+    --name="omm" \
     --onefile \
     --windowed \
     --clean \
@@ -29,12 +29,12 @@ mkdir -p "${APP_DIR}/usr/bin"
 mkdir -p "${APP_DIR}/usr/share/icons/hicolor/scalable/apps"
 mkdir -p "${APP_DIR}/usr/share/applications"
 
-cp "${DIST_DIR}/omm-linux" "${APP_DIR}/usr/bin/"
-cp "${SCRIPT_DIR}/assets/icon.svg" "${APP_DIR}/usr/share/icons/hicolor/scalable/apps/omm-linux.svg"
-cp "${SCRIPT_DIR}/assets/icon.svg" "${APP_DIR}/omm-linux.svg"
+cp "${DIST_DIR}/omm" "${APP_DIR}/usr/bin/"
+cp "${SCRIPT_DIR}/assets/icon.svg" "${APP_DIR}/usr/share/icons/hicolor/scalable/apps/omm.svg"
+cp "${SCRIPT_DIR}/assets/icon.svg" "${APP_DIR}/omm.svg"
 cp "${SCRIPT_DIR}/assets/icon.svg" "${APP_DIR}/.DirIcon"
-cp "${SCRIPT_DIR}/assets/omm-linux.desktop" "${APP_DIR}/usr/share/applications/"
-cp "${SCRIPT_DIR}/assets/omm-linux.desktop" "${APP_DIR}/omm-linux.desktop"
+cp "${SCRIPT_DIR}/assets/omm.desktop" "${APP_DIR}/usr/share/applications/"
+cp "${SCRIPT_DIR}/assets/omm.desktop" "${APP_DIR}/omm.desktop"
 
 # Create AppRun
 cat << 'RUN' > "${APP_DIR}/AppRun"
@@ -42,7 +42,7 @@ cat << 'RUN' > "${APP_DIR}/AppRun"
 SELF=$(readlink -f "$0")
 HERE=${SELF%/*}
 export PATH="${HERE}/usr/bin:${PATH}"
-exec "${HERE}/usr/bin/omm-linux" "$@"
+exec "${HERE}/usr/bin/omm" "$@"
 RUN
 chmod +x "${APP_DIR}/AppRun"
 
@@ -54,8 +54,8 @@ if [ ! -x "${APPIMAGETOOL}" ]; then
     exit 1
 fi
 
-VERSION="${1:-v0.9.5}"
-OUTPUT_NAME="OMM-Linux-${VERSION}-x86_64.AppImage"
+VERSION="${1:-v0.9.6}"
+OUTPUT_NAME="OMM-${VERSION}-x86_64.AppImage"
 rm -f "${DIST_DIR}/${OUTPUT_NAME}"
 ARCH=x86_64 "${APPIMAGETOOL}" "${APP_DIR}" "${DIST_DIR}/${OUTPUT_NAME}"
 

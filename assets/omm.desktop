@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=OMM
+Comment=Onboard Memory Manager for Gaming Mice
+Exec=omm
+Icon=omm
+Terminal=false
+Type=Application
+Categories=Utility;
+StartupWMClass=omm

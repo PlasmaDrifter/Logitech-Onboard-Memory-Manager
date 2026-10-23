@@ -1,16 +1,16 @@
-"""Systemd user service manager for OMM Linux background auto-switching daemon."""
+"""Systemd user service manager for OMM background auto-switching daemon."""
 
 import os
 import subprocess
 from pathlib import Path
 from typing import Tuple
 
-SERVICE_NAME = "omm-linux-watcher.service"
-OLD_SERVICE_NAME = "logitech-omm-watcher.service"
+SERVICE_NAME = "omm-watcher.service"
+LEGACY_SERVICES = ["omm-linux-watcher.service", "logitech-omm-watcher.service"]
 
 
 class BackgroundServiceManager:
-    """Manages the omm-linux-watcher systemd user service."""
+    """Manages the omm-watcher systemd user service."""
 
     @staticmethod
     def get_service_file_path() -> Path:
@@ -18,27 +18,33 @@ class BackgroundServiceManager:
 
     @staticmethod
     def ensure_service_installed() -> bool:
-        """Installs or updates the systemd user service unit file and cleans up legacy service."""
-        old_service_path = Path.home() / ".config" / "systemd" / "user" / OLD_SERVICE_NAME
-        if old_service_path.exists():
-            try:
-                subprocess.run(["systemctl", "--user", "stop", OLD_SERVICE_NAME], capture_output=True, timeout=5)
-                subprocess.run(["systemctl", "--user", "disable", OLD_SERVICE_NAME], capture_output=True, timeout=5)
-                old_service_path.unlink(missing_ok=True)
-            except Exception:
-                pass
+        """Installs or updates the systemd user service unit file and cleans up legacy services."""
+        for old_svc in LEGACY_SERVICES:
+            old_service_path = Path.home() / ".config" / "systemd" / "user" / old_svc
+            if old_service_path.exists():
+                try:
+                    subprocess.run(["systemctl", "--user", "stop", old_svc], capture_output=True, timeout=5)
+                    subprocess.run(["systemctl", "--user", "disable", old_svc], capture_output=True, timeout=5)
+                    old_service_path.unlink(missing_ok=True)
+                except Exception:
+                    pass
 
         service_path = BackgroundServiceManager.get_service_file_path()
         service_path.parent.mkdir(parents=True, exist_ok=True)
 
-        appimage = Path.home() / "Applications" / "OMM Linux"
+        appimage = Path.home() / "Applications" / "OMM"
+        if not appimage.exists():
+            appimage_alt = Path.home() / "Applications" / "OMM Linux"
+            if appimage_alt.exists():
+                appimage = appimage_alt
+
         if appimage.is_file() and os.access(appimage, os.X_OK):
-            exec_start = '"%h/Applications/OMM Linux" --daemon'
+            exec_start = f'"{appimage}" --daemon'
         else:
-            exec_start = '"%h/.local/bin/omm-linux" --daemon'
+            exec_start = '"%h/.local/bin/omm" --daemon'
 
         unit_content = f"""[Unit]
-Description=OMM Linux Profile Auto-Switching Watcher
+Description=OMM Profile Auto-Switching Watcher
 After=graphical-session.target
 
 [Service]

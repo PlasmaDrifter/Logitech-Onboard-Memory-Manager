@@ -6,9 +6,9 @@ BIN_DIR="${HOME}/.local/bin"
 APP_DIR="${HOME}/.local/share/applications"
 ICON_DIR="${HOME}/.local/share/icons/hicolor/scalable/apps"
 SERVICE_DIR="${HOME}/.config/systemd/user"
-SERVICE_NAMES=("omm-linux-watcher.service" "logitech-omm-watcher.service")
+SERVICE_NAMES=("omm-watcher.service" "omm-linux-watcher.service" "logitech-omm-watcher.service")
 
-echo "Uninstalling OMM Linux..."
+echo "Uninstalling OMM..."
 
 # 1. Stop and disable background services if running
 if command -v systemctl >/dev/null 2>&1; then
@@ -30,7 +30,7 @@ if command -v systemctl >/dev/null 2>&1; then
 fi
 
 # 2. Remove command launchers
-for bin_name in "omm-linux" "logitech-onboard-gui"; do
+for bin_name in "omm" "omm-linux" "logitech-onboard-gui"; do
     if [ -L "${BIN_DIR}/${bin_name}" ] || [ -f "${BIN_DIR}/${bin_name}" ]; then
         rm -f "${BIN_DIR}/${bin_name}"
         echo "Removed command link: ${BIN_DIR}/${bin_name}"
@@ -38,7 +38,7 @@ for bin_name in "omm-linux" "logitech-onboard-gui"; do
 done
 
 # 3. Remove .desktop entries
-for desk_name in "omm-linux.desktop" "logitech-onboard.desktop"; do
+for desk_name in "omm.desktop" "omm-linux.desktop" "logitech-onboard.desktop"; do
     if [ -f "${APP_DIR}/${desk_name}" ]; then
         rm -f "${APP_DIR}/${desk_name}"
         echo "Removed desktop entry: ${APP_DIR}/${desk_name}"
@@ -46,7 +46,7 @@ for desk_name in "omm-linux.desktop" "logitech-onboard.desktop"; do
 done
 
 # 4. Remove icons
-for icon_name in "omm-linux.svg" "logitech-onboard.svg"; do
+for icon_name in "omm.svg" "omm-linux.svg" "logitech-onboard.svg"; do
     if [ -f "${ICON_DIR}/${icon_name}" ]; then
         rm -f "${ICON_DIR}/${icon_name}"
         echo "Removed icon: ${ICON_DIR}/${icon_name}"

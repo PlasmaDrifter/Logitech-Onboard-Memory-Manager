@@ -127,7 +127,7 @@ class ProfileWatcher:
             "steam", "steamwebhelper", "lutris", "heroic", "com.heroicgameslauncher.hgl",
             "epicgameslauncher", "gog-galaxy", "itch",
             "xwaylandvideobridge", "krunner", "plasmashell", "gnome-shell",
-            "logitech-onboard-gui", "omm-linux"
+            "logitech-onboard-gui", "omm-linux", "omm"
         }
         NON_GAME_SUBSTRINGS = {
             "chrome", "firefox", "chromium", "brave", "edge", "opera", "vivaldi", "zen",
