@@ -23,6 +23,7 @@ from ui.mouse_canvas import MouseCanvas
 from ui.games_tab import GamesTab
 from ui.rgb_dialog import RGBLightingDialog
 from core.profile_watcher import ProfileWatcher
+from core.service_manager import BackgroundServiceManager
 
 
 class WorkerThread(QtCore.QThread):
@@ -73,7 +74,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.watcher = ProfileWatcher(backend=self.backend)
         self.games_tab = GamesTab(self.watcher)
-        self.watcher.start()
+        if not BackgroundServiceManager.is_running():
+            self.watcher.start()
 
         self.setWindowTitle(f"Logitech Onboard Memory Manager {APP_VERSION}")
         self.resize(1180, 760)

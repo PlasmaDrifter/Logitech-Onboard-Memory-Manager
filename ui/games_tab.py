@@ -602,6 +602,7 @@ class GamesTab(QtWidgets.QWidget):
             QtCore.Q_ARG(str, label or "")
         )
 
+    @QtCore.Slot(int, str)
     def _update_status_ui(self, slot: int, label: str):
         self.lbl_status.setText(f"Active: Slot {slot} ({label})")
         # Refresh Active Staged Game badge on Profile 5 tab if it exists

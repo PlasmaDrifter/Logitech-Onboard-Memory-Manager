@@ -95,25 +95,39 @@ class ProfileWatcher:
     def _match_active_rule(self, win_class: str, win_title: str = "") -> Optional[GameRule]:
         wc_lower = win_class.lower() if win_class else ""
         wt_lower = win_title.lower() if win_title else ""
-        combined = f"{wc_lower} {wt_lower}".strip()
-        if not combined:
+        if not wc_lower and not wt_lower:
             return None
 
-        # Do not match launcher client windows (Steam store/library, Lutris, Heroic)
-        LAUNCHER_CLASSES = {"steam", "lutris", "heroic", "com.heroicgameslauncher.hgl"}
-        if wc_lower in LAUNCHER_CLASSES:
-            return None
+        # Strictly ignore non-game applications (browsers, editors, terminals, launchers, desktop utilities)
+        NON_GAME_EXACT = {
+            "steam", "steamwebhelper", "lutris", "heroic", "com.heroicgameslauncher.hgl",
+            "epicgameslauncher", "gog-galaxy", "itch",
+            "xwaylandvideobridge", "krunner", "plasmashell", "gnome-shell",
+            "logitech-onboard-gui"
+        }
+        NON_GAME_SUBSTRINGS = {
+            "chrome", "firefox", "chromium", "brave", "edge", "opera", "vivaldi",
+            "antigravity", "code", "cursor", "vscodium", "sublime",
+            "gedit", "kate", "kwrite", "konsole", "terminal", "alacritty",
+            "kitty", "foot", "wezterm", "ptyxis", "xterm",
+            "dolphin", "nautilus", "thunar", "nemo", "pcmanfm"
+        }
+        if not wc_lower.startswith("steam_app_"):
+            if wc_lower in NON_GAME_EXACT:
+                return None
+            for sub in NON_GAME_SUBSTRINGS:
+                if sub in wc_lower:
+                    return None
 
         for rule in self.rules:
             if not rule.enabled:
                 continue
             p = rule.pattern.lower().strip()
-            name_p = rule.name.lower().strip()
-            # Match on pattern in window class or title (pattern must be part of window, NOT reverse)
-            if p and (p in wc_lower or p in wt_lower):
-                return rule
-            if name_p and len(name_p) >= 3 and (name_p in wt_lower or name_p in wc_lower):
-                return rule
+            # Match strictly against the rule pattern in the window class or window title
+            if p:
+                if p in wc_lower or p in wt_lower:
+                    return rule
+
         return None
 
     def _watch_loop(self) -> None:

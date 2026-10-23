@@ -31,6 +31,8 @@ def run_daemon():
     """Runs the ProfileWatcher in headless background mode."""
     import time
     import signal
+    import logging
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
     from core.profile_watcher import ProfileWatcher
 
     watcher = ProfileWatcher()
