@@ -27,11 +27,40 @@ except ImportError:
 from ui.main_window import MainWindow
 
 
+def run_daemon():
+    """Runs the ProfileWatcher in headless background mode."""
+    import time
+    import signal
+    from core.profile_watcher import ProfileWatcher
+
+    watcher = ProfileWatcher()
+    watcher.start()
+
+    running = True
+
+    def sig_handler(signum, frame):
+        nonlocal running
+        running = False
+        watcher.stop()
+
+    signal.signal(signal.SIGTERM, sig_handler)
+    signal.signal(signal.SIGINT, sig_handler)
+
+    try:
+        while running:
+            time.sleep(1.0)
+    except (KeyboardInterrupt, SystemExit):
+        watcher.stop()
+
+
 def main():
+    if "--daemon" in sys.argv:
+        run_daemon()
+        return
+
     app = QtWidgets.QApplication(sys.argv)
     app.setApplicationName("Logitech Onboard Memory Manager")
     app.setOrganizationName("LogitechLinux")
-
 
     window = MainWindow()
     window.show()

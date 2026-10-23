@@ -17,9 +17,9 @@ class MouseCanvas(QtWidgets.QWidget):
             1: {"tag": "B1: Left Click", "pos": (205, 138), "target": (225, 138), "box_w": 95},
             2: {"tag": "B2: Right Click", "pos": (445, 125), "target": (335, 125), "box_w": 100},
             3: {"tag": "B3: Middle Click", "pos": (270, 85), "target": (270, 85), "box_w": 105},
-            4: {"tag": "B4: Back", "pos": (68, 260), "target": (152, 255), "box_w": 95},
-            5: {"tag": "B5: Thumb Fwd", "pos": (68, 195), "target": (152, 195), "box_w": 95},
-            6: {"tag": "B6: Sniper", "pos": (68, 325), "target": (124, 305), "box_w": 90},
+            5: {"tag": "B5: Forward", "pos": (68, 185), "target": (156, 185), "box_w": 95},
+            6: {"tag": "B6: Back", "pos": (68, 250), "target": (153, 250), "box_w": 95},
+            4: {"tag": "B4: DPI Shift", "pos": (68, 315), "target": (149, 315), "box_w": 95},
             7: {"tag": "B7: Tilt ◀", "pos": (175, 25), "target": (248, 75), "box_w": 80},
             8: {"tag": "B8: Tilt ▶", "pos": (365, 25), "target": (292, 75), "box_w": 80},
             9: {"tag": "B9: Profile", "pos": (270, 185), "target": (270, 185), "box_w": 90},
@@ -371,11 +371,6 @@ class MouseCanvas(QtWidgets.QWidget):
             painter.drawArc(QtCore.QRectF(250, 355, 40, 40), 0, 16 * 270)
             painter.drawLine(270, 375, 288, 375)
 
-            # Thumb rest rubber grip pattern lines
-            painter.setPen(QtGui.QPen(QtGui.QColor("#252b37"), 1.5))
-            for gy in range(250, 370, 12):
-                painter.drawLine(140, gy, 170, gy + 14)
-
             # Thumb Switches
             painter.setPen(QtGui.QPen(QtGui.QColor("#5a6784"), 1.6))
             painter.setBrush(QtGui.QBrush(QtGui.QColor("#1b1e27")))
@@ -383,16 +378,21 @@ class MouseCanvas(QtWidgets.QWidget):
                 for y in (165, 210, 255, 300):
                     painter.drawRoundedRect(165, y, 12, 18, 2, 2)
             else:
-                # G502 Physical switches on shell:
-                # B5 Forward at Y=185
-                painter.drawRoundedRect(152, 185, 15, 26, 3, 3)
-                # B4 Back at Y=245
-                painter.drawRoundedRect(152, 245, 15, 28, 3, 3)
-                # B6 Sniper (thumb rest paddle)
-                painter.drawRoundedRect(124, 295, 16, 24, 4, 4)
+                # G502 Side switches:
+                # B5 Forward (Upper switch on contour)
+                painter.drawRoundedRect(156, 172, 14, 26, 3, 3)
+                # B6 Back (Middle switch)
+                painter.drawRoundedRect(153, 237, 14, 26, 3, 3)
+                # B4 DPI Shift (Lower switch)
+                painter.drawRoundedRect(149, 302, 14, 26, 3, 3)
                 # G7 & G8 Index switches
                 painter.drawRoundedRect(172, 58, 13, 22, 3, 3)
                 painter.drawRoundedRect(167, 98, 13, 22, 3, 3)
+
+            # Thumb rest rubber grip pattern lines (below side switches)
+            painter.setPen(QtGui.QPen(QtGui.QColor("#252b37"), 1.5))
+            for gy in range(335, 375, 12):
+                painter.drawLine(140, gy, 170, gy + 14)
 
             # Scroll Wheel Housing
             painter.setPen(QtGui.QPen(QtGui.QColor("#5a6784"), 2))

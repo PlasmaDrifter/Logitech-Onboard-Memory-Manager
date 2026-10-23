@@ -20,6 +20,8 @@ from core.keycodes import (
 )
 from ui.button_editor_dialog import ButtonEditorDialog
 from ui.mouse_canvas import MouseCanvas
+from ui.games_tab import GamesTab
+from core.profile_watcher import ProfileWatcher
 
 
 class WorkerThread(QtCore.QThread):
@@ -52,7 +54,7 @@ class WorkerThread(QtCore.QThread):
             self.finished_signal.emit(False, str(e))
 
 
-APP_VERSION = "v0.7.0"
+APP_VERSION = "v0.8.12"
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -62,6 +64,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.config: Optional[OnboardConfig] = None
         self.current_gshift_mode = False
         self.current_model_key = "g502"
+
+        self.watcher = ProfileWatcher(backend=self.backend)
+        self.games_tab = GamesTab(self.watcher)
+        self.watcher.start()
 
         self.setWindowTitle(f"Logitech Onboard Memory Manager {APP_VERSION}")
         self.resize(1180, 760)
@@ -75,6 +81,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Initial read from mouse
         QtCore.QTimer.singleShot(200, self.on_read_from_mouse)
+
+    def closeEvent(self, event: QtGui.QCloseEvent):
+        if hasattr(self, "watcher") and self.watcher:
+            self.watcher.stop()
+        super().closeEvent(event)
 
     def _setup_styling(self):
         self.setStyleSheet("""
@@ -316,6 +327,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.combo_model.blockSignals(False)
 
         self._rebuild_tabs()
+        if hasattr(self, "chk_auto_turn_off_rgb") and self.chk_auto_turn_off_rgb.isChecked():
+            QtCore.QTimer.singleShot(100, self.backend.turn_off_lighting)
 
     def _on_model_selector_changed(self, idx: int):
         model_key = self.combo_model.currentData()
@@ -342,11 +355,11 @@ class MainWindow(QtWidgets.QMainWindow):
             label += " (Disabled)"
         return label
 
-    def _rebuild_tabs(self):
+    def _rebuild_tabs(self, target_index: Optional[int] = None):
         if not self.config:
             return
 
-        curr_tab = self.tab_widget.currentIndex()
+        curr_tab = self.tab_widget.currentIndex() if target_index is None else target_index
         self.tab_widget.clear()
 
         for pid in sorted(self.config.profiles.keys()):
@@ -355,6 +368,10 @@ class MainWindow(QtWidgets.QMainWindow):
             tab.profile_id = pid
             label = self._get_tab_label(prof)
             self.tab_widget.addTab(tab, label)
+
+        # Append Games / Auto-Switching Tab
+        if hasattr(self, "games_tab") and self.games_tab:
+            self.tab_widget.addTab(self.games_tab, "Game Profiles")
 
         if 0 <= curr_tab < self.tab_widget.count():
             self.tab_widget.setCurrentIndex(curr_tab)
@@ -416,6 +433,25 @@ class MainWindow(QtWidgets.QMainWindow):
 
         mouse_canvas = MouseCanvas(model_key=self.current_model_key)
         canvas_layout.addWidget(mouse_canvas)
+
+        if prof.profile_id == 5:
+            lbl_staged_game = QtWidgets.QLabel()
+            lbl_staged_game.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+            lbl_staged_game.setStyleSheet(
+                "background-color: #1e293b; color: #38bdf8; font-size: 13px; font-weight: bold; "
+                "border: 1px solid #334155; border-radius: 6px; padding: 6px 12px; margin-top: 4px;"
+            )
+            staged_name = ""
+            if hasattr(self, "games_tab") and self.games_tab:
+                staged_name = self.games_tab.mgr.get_settings().staged_slot5_profile
+            if staged_name:
+                clean_name = staged_name.replace(".json", "")
+                lbl_staged_game.setText(f"Active Staged Game: {clean_name}")
+            else:
+                lbl_staged_game.setText("Active Staged Game: None (Default Slot 5)")
+            canvas_layout.addWidget(lbl_staged_game)
+            tab.lbl_staged_game = lbl_staged_game
+
         splitter.addWidget(canvas_container)
 
         # Right: DPI Stages + Button Table
@@ -572,7 +608,18 @@ class MainWindow(QtWidgets.QMainWindow):
             prof.resolution_default_index = stage_idx
 
     def on_tab_changed(self, idx: int):
-        pass
+        # Dynamically refresh Active Staged Game badge on Profile 5 tab whenever viewed
+        if 0 <= idx < self.tab_widget.count():
+            tab = self.tab_widget.widget(idx)
+            if getattr(tab, "profile_id", None) == 5 and hasattr(tab, "lbl_staged_game"):
+                staged_name = ""
+                if hasattr(self, "games_tab") and self.games_tab:
+                    staged_name = self.games_tab.mgr.get_settings().staged_slot5_profile
+                if staged_name:
+                    clean_name = staged_name.replace(".json", "")
+                    tab.lbl_staged_game.setText(f"Active Staged Game: {clean_name}")
+                else:
+                    tab.lbl_staged_game.setText("Active Staged Game: None (Default Slot 5)")
 
     def on_set_active_profile(self):
         tab_idx = self.tab_widget.currentIndex()
@@ -621,6 +668,24 @@ class MainWindow(QtWidgets.QMainWindow):
         if success:
             if self.chk_auto_turn_off_rgb.isChecked():
                 self.backend.turn_off_lighting()
+
+            # If Profile 5 was written, sync it to the library profile if one is assigned
+            if hasattr(self, "games_tab") and self.config and 5 in self.config.profiles:
+                p5 = self.config.profiles[5]
+                staged = self.games_tab.mgr.get_settings().staged_slot5_profile
+                if staged:
+                    p5_dict = {
+                        "name": p5.name,
+                        "enabled": p5.enabled,
+                        "report_rate": p5.report_rate,
+                        "resolutions": p5.resolutions,
+                        "resolution_default_index": p5.resolution_default_index,
+                        "resolution_shift_index": p5.resolution_shift_index,
+                        "buttons": [b.to_dict() for b in p5.buttons],
+                        "gbuttons": [b.to_dict() for b in p5.gbuttons],
+                    }
+                    self.games_tab.mgr.save_profile_to_library(staged, p5_dict)
+
             self.device_status.setText("Settings successfully burned to mouse memory.")
             QtWidgets.QMessageBox.information(self, "Success", msg)
         else:

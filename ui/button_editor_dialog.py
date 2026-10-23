@@ -56,6 +56,10 @@ QT_KEY_TO_HID = {
     QtCore.Qt.Key.Key_Delete: 0x4C, QtCore.Qt.Key.Key_End: 0x4D, QtCore.Qt.Key.Key_PageDown: 0x4E,
     QtCore.Qt.Key.Key_Right: 0x4F, QtCore.Qt.Key.Key_Left: 0x50,
     QtCore.Qt.Key.Key_Down: 0x51, QtCore.Qt.Key.Key_Up: 0x52,
+    QtCore.Qt.Key.Key_Shift: 0xE1,
+    QtCore.Qt.Key.Key_Control: 0xE0,
+    QtCore.Qt.Key.Key_Alt: 0xE2,
+    QtCore.Qt.Key.Key_Meta: 0xE3,
 }
 
 
@@ -73,9 +77,17 @@ class KeyRecorderWidget(QtWidgets.QLineEdit):
     def keyPressEvent(self, event: QtGui.QKeyEvent):
         key = event.key()
 
-        # Ignore standalone modifier presses
+        # Handle standalone modifier presses
         if key in (QtCore.Qt.Key.Key_Control, QtCore.Qt.Key.Key_Shift, QtCore.Qt.Key.Key_Alt, QtCore.Qt.Key.Key_Meta):
-            return
+            hid_code = QT_KEY_TO_HID.get(key, 0)
+            if hid_code:
+                self.current_keycode = hid_code
+                self.current_modifiers = 0
+                name = HID_KEYCODES.get(hid_code, f"0x{hid_code:02X}")
+                self.setText(name)
+                self.shortcut_captured.emit(self.current_keycode, 0)
+                event.accept()
+                return
 
         mods = 0
         event_mods = event.modifiers()
@@ -170,6 +182,10 @@ class ButtonEditorDialog(QtWidgets.QDialog):
         self.chk_shift = QtWidgets.QCheckBox("Shift")
         self.chk_alt = QtWidgets.QCheckBox("Alt")
         self.chk_super = QtWidgets.QCheckBox("Super")
+        self.chk_ctrl.toggled.connect(self._on_manual_key_changed)
+        self.chk_shift.toggled.connect(self._on_manual_key_changed)
+        self.chk_alt.toggled.connect(self._on_manual_key_changed)
+        self.chk_super.toggled.connect(self._on_manual_key_changed)
         mod_box.addWidget(self.chk_ctrl)
         mod_box.addWidget(self.chk_shift)
         mod_box.addWidget(self.chk_alt)

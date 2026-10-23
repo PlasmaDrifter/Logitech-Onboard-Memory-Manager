@@ -2,25 +2,44 @@
 
 A native Linux GUI application designed to inspect, edit, and write button assignments, DPI stages, and profiles directly into the onboard flash memory of Logitech gaming mice (such as the Logitech G502 X PLUS, G502 LIGHTSPEED, HERO, and other HID++ 2.0 compatible hardware).
 
-No Windows installation, Logitech G HUB, Solaar, or background daemons required.
+No Windows installation or Logitech G HUB required.
 
-![Logitech Onboard Memory Manager Screenshot](assets/screenshot.png)
+![Profile Editor View](assets/screenshot.png)
+
+---
+
+## Screenshots
+
+| Game Auto-Switching & Background Watcher | Dynamic Profile Staging (Slot 5) |
+|:---:|:---:|
+| ![Game Auto-Switching](assets/screenshot_games.png) | ![Dynamic Staging](assets/screenshot_staging.png) |
 
 ---
 
 ## Features
 
 - **Direct Hardware Onboard Memory Access**: Communicates directly over `/dev/hidraw*` via raw HID++ 2.0 protocol (`0x8100` Onboard Profiles feature). Edits are burned straight into the mouse flash sectors and persist across computers, operating systems, and reboots.
+- **Accurate Interactive Mouse Diagram**: Real-time visual mouse canvas with click-to-edit hotspots, switch indicators, and synchronized button table.
+  - G502 Side Button Layout: B5 (Side Upper / Front), B6 (Side Middle / Rear), and B4 (Side Lower / Paddle).
+- **Automatic Game Profile Switching (Game Lock)**:
+  - Automatically switches profiles when launching or focusing games (detecting Steam, Lutris, Heroic, Epic, and GOG titles).
+  - Dynamic Staging (Slot 5): Instantly flashes game profiles into slot 5 on demand, allowing unlimited game profiles while keeping slots 1-4 intact.
+  - Auto-Desktop Return: Instantly returns to your configured default desktop slot upon alt-tabbing or quitting a game.
+- **Background Watcher Service**:
+  - Optional systemd user daemon (`logitech-omm-watcher.service`) keeps auto-switching active in the background even when the GUI is closed.
+  - In-app service dashboard with live status badge, Start/Stop toggle, and auto-start on boot configuration.
+- **Installed Game Scanner**:
+  - One-click scanning for games across Steam, Lutris, and Heroic with filter search and instant rule creation.
 - **Physical Button Remapping**:
   - Standard Mouse Buttons (Left, Right, Middle, Back, Forward, Extra buttons)
-  - Keyboard Shortcuts (Interactive recorder capturing single keys or complex combos with Ctrl, Shift, Alt, and Super modifiers)
+  - Keyboard Shortcuts & Standalone Modifiers (Interactive recorder capturing single keys, standalone modifiers like Shift/Ctrl/Alt/Super, or complex combinations)
   - Hardware Functions (DPI Shift/Sniper, Next DPI, Previous DPI, Cycle DPI, Profile Switch, Wheel Tilt Left/Right)
   - Disabled / No Action
 - **G-Shift Support**: Configure distinct secondary button bindings for G-Shift mode.
 - **DPI Profiles & Polling Rate**: Adjust up to 5 DPI sensitivity stages per profile and set report rates (125 Hz, 250 Hz, 500 Hz, 1000 Hz).
 - **Multi-Profile Management**: Supports all 5 onboard hardware profile slots with direct active profile switching.
-- **Lighting Controls**: Includes hardware RGB shutoff and an automatic toggle to disable RGB lighting on save.
-- **Automated Backups**: Automatically generates timestamped YAML backups of all onboard memory sectors before committing changes.
+- **Permanent Hardware RGB Shutoff**: Enforces permanent hardware-level LED shutoff (disabling bootUpEffect in hardware NvConfig and zeroing EEPROM lighting zones) so lights stay off even across power cycles.
+- **Automated Backups**: Automatically generates timestamped backups before committing changes.
 - **Zero Dependencies via AppImage**: Single executable format that runs out of the box on any modern Linux distribution.
 
 ---

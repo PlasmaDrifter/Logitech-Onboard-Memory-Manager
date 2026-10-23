@@ -53,13 +53,9 @@ if [ ! -x "${APPIMAGETOOL}" ]; then
     exit 1
 fi
 
-VERSION="${1:-v0.7.0}"
+VERSION="${1:-v0.8.1}"
 OUTPUT_NAME="Logitech-Onboard-Memory-Manager-${VERSION}-x86_64.AppImage"
 rm -f "${DIST_DIR}/${OUTPUT_NAME}"
 ARCH=x86_64 "${APPIMAGETOOL}" "${APP_DIR}" "${DIST_DIR}/${OUTPUT_NAME}"
-
-# Also keep generic name for symlink or local launcher
-rm -f "${DIST_DIR}/Logitech-Onboard-Memory-Manager-x86_64.AppImage"
-cp -f "${DIST_DIR}/${OUTPUT_NAME}" "${DIST_DIR}/Logitech-Onboard-Memory-Manager-x86_64.AppImage"
 
 echo "AppImage created successfully at ${DIST_DIR}/${OUTPUT_NAME}"

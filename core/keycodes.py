@@ -82,6 +82,8 @@ HID_KEYCODES = {
     0x6D: "F18", 0x6E: "F19", 0x6F: "F20", 0x70: "F21", 0x71: "F22",
     0x72: "F23", 0x73: "F24",
     0x7F: "Mute", 0x80: "VolumeUp", 0x81: "VolumeDown",
+    0xE0: "Left Ctrl", 0xE1: "Left Shift", 0xE2: "Left Alt", 0xE3: "Left GUI (Super)",
+    0xE4: "Right Ctrl", 0xE5: "Right Shift", 0xE6: "Right Alt", 0xE7: "Right GUI (Super)",
 }
 
 HID_KEYCODES_INV = {v.upper(): k for k, v in HID_KEYCODES.items()}
@@ -91,9 +93,9 @@ G502_BUTTON_LABELS = {
     1: "Button 1: Left Click",
     2: "Button 2: Right Click",
     3: "Button 3: Middle Click / Scroll Wheel Press",
-    4: "Button 4: Thumb Back (Rear Side Button)",
-    5: "Button 5: Thumb Forward (Front Side Button)",
-    6: "Button 6: Thumb Sniper (DPI Shift Button)",
+    4: "Button 4: Side Lower",
+    5: "Button 5: Side Upper",
+    6: "Button 6: Side Middle",
     7: "Button 7: Scroll Wheel Tilt Left",
     8: "Button 8: Scroll Wheel Tilt Right",
     9: "Button 9: Profile Switcher (Behind wheel)",

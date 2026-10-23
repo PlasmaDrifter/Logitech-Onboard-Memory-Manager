@@ -119,6 +119,14 @@ class MouseBackend:
         self.device_name = device_name
         self.raw_yaml_cache: Optional[OnboardProfilesYaml] = None
 
+    @staticmethod
+    def _translate_raw_to_ui_buttons(raw_btns: list) -> list:
+        return list(raw_btns)
+
+    @staticmethod
+    def _translate_ui_to_raw_buttons(ui_btns: list) -> list:
+        return list(ui_btns)
+
     def _get_solaar_cmd(self) -> list:
         """Determines whether Solaar is native or in Flatpak."""
         if shutil.which("solaar"):
@@ -140,19 +148,6 @@ class MouseBackend:
                 return pid
         except Exception:
             pass
-        # Fallback to Solaar
-        cmd = self._get_solaar_cmd() + ["config", self.device_name]
-        try:
-            res = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
-            for line in res.stdout.splitlines():
-                if "onboard_profiles =" in line:
-                    val = line.split("=")[-1].strip()
-                    if "Profile" in val:
-                        parts = val.split()
-                        if len(parts) >= 2 and parts[1].isdigit():
-                            return int(parts[1])
-        except Exception:
-            pass
         return 1
 
     def set_active_profile(self, profile_num: int) -> Tuple[bool, str]:
@@ -161,76 +156,37 @@ class MouseBackend:
             drv = NativeHIDPP()
             if drv.open():
                 ok = drv.set_active_profile(profile_num)
+                drv.turn_off_rgb()
                 drv.close()
                 if ok:
                     return True, f"Active profile set to Profile {profile_num}"
-        except Exception:
-            pass
-        # Fallback to Solaar
-        cmd = self._get_solaar_cmd() + ["config", self.device_name, "onboard_profiles", f"Profile {profile_num}"]
-        try:
-            res = subprocess.run(cmd, capture_output=True, text=True, timeout=6)
-            if res.returncode == 0:
-                return True, f"Active profile set to Profile {profile_num}"
-            return False, res.stderr or res.stdout
         except Exception as e:
             return False, str(e)
+        return False, "Failed to connect to mouse"
 
     def turn_off_lighting(self) -> Tuple[bool, str]:
-        """Completely disables and shuts off all RGB LED zones on the mouse."""
+        """Completely disables and shuts off all RGB LED zones on the mouse and saves config."""
         try:
             drv = NativeHIDPP()
             if drv.open():
                 drv.turn_off_rgb()
                 drv.close()
                 return True, "Mouse lighting turned completely off."
-        except Exception:
-            pass
-        # Fallback to Solaar
-        py_code = (
-            "from solaar.cli import _receivers_and_devices\n"
-            "from logitech_receiver import rgb_power\n"
-            "from logitech_receiver.hidpp20_constants import SupportedFeature\n"
-            "for r in _receivers_and_devices():\n"
-            "    devices = [r] if getattr(r, 'isDevice', False) else list(r)\n"
-            "    for d in devices:\n"
-            "        if d.online and 'G502' in d.name:\n"
-            "            rgb_power.push_artanis_perkey_prep(d)\n"
-            "            for z in range(1, 9):\n"
-            "                d.feature_request(SupportedFeature.PER_KEY_LIGHTING_V2, 0x60, z, 0, 0, 0, 1)\n"
-            "            d.feature_request(SupportedFeature.PER_KEY_LIGHTING_V2, 0x70, 0x00)\n"
-            "            d.feature_request(SupportedFeature.RGB_EFFECTS, 0x10, 0x00, 0x00, 0x00, 0x00)\n"
-            "            print('LED_OFF_DONE')\n"
-        )
-        cmd = ["flatpak", "run", "--command=python3", "io.github.pwr_solaar.solaar", "-c", py_code]
-        try:
-            res = subprocess.run(cmd, capture_output=True, text=True, timeout=6)
-            if "LED_OFF_DONE" in res.stdout:
-                return True, "Mouse lighting turned completely off."
-            return False, res.stderr or res.stdout
         except Exception as e:
             return False, str(e)
+        return False, "Could not access mouse"
 
     def read_macros(self) -> Dict[int, str]:
         """Reads and disassembles macros from mouse memory sector 6."""
         macro_dict = dict(KNOWN_MACROS)
-        cmd = ["flatpak", "run", "--command=python3", "io.github.pwr_solaar.solaar", "-c",
-               "from solaar.cli import _receivers_and_devices; "
-               "from logitech_receiver.hidpp20 import OnboardProfiles; "
-               "for r in _receivers_and_devices():\n"
-               " devices = [r] if getattr(r, 'isDevice', False) else list(r)\n"
-               " for d in devices:\n"
-               "  if d.online and 'G502' in d.name:\n"
-               "   s = OnboardProfiles.read_sector(d, 6, 224)\n"
-               "   print('SEC6:' + s.hex())\n"]
         try:
-            res = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
-            for line in res.stdout.splitlines():
-                if line.startswith("SEC6:"):
-                    sec_hex = line[5:].strip()
-                    sec_bytes = bytes.fromhex(sec_hex)
-                    for addr in range(0, len(sec_bytes) - 22, 22):
-                        txt = decode_logitech_macro(sec_bytes[addr:addr+22])
+            drv = NativeHIDPP()
+            if drv.open():
+                sec6 = drv.read_sector(6, 224)
+                drv.close()
+                if sec6:
+                    for addr in range(0, len(sec6) - 22, 22):
+                        txt = decode_logitech_macro(sec6[addr : addr + 22])
                         if txt:
                             macro_dict[addr] = txt
         except Exception:
@@ -238,42 +194,99 @@ class MouseBackend:
         return macro_dict
 
     def read_profiles(self) -> Tuple[Optional[OnboardConfig], str]:
-        """Reads all profiles from the mouse onboard memory."""
-        cmd = self._get_solaar_cmd() + ["profiles", self.device_name]
+        """Reads all profiles directly from the mouse onboard memory."""
+        import struct
         try:
-            res = subprocess.run(cmd, capture_output=True, text=True, timeout=8)
-            if res.returncode != 0:
-                return None, f"Command failed: {res.stderr or res.stdout}"
+            drv = NativeHIDPP()
+            if not drv.open():
+                return None, "Could not open Logitech mouse device on /dev/hidraw. Check permissions and USB connection."
 
-            yaml_lines = []
-            capture = False
-            for line in res.stdout.splitlines():
-                if line.startswith("!OnboardProfiles"):
-                    capture = True
-                if capture:
-                    yaml_lines.append(line)
-
-            yaml_text = "\n".join(yaml_lines)
-            if not yaml_text.strip():
-                return None, f"No valid profile data received from device:\n{res.stdout}\n{res.stderr}"
-
-            data = yaml.safe_load(yaml_text)
-            self.raw_yaml_cache = data
-
-            # Save initial backup if needed
-            ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_path = get_backup_dir() / f"initial_{ts}.yaml"
-            with open(backup_path, "w") as bf:
-                bf.write(yaml_text)
-
-            active_id = self.query_active_profile()
+            device_name = drv.get_device_name() or self.device_name
+            active_id = drv.query_active_profile()
             macros = self.read_macros()
-            config = self._convert_from_yaml_obj(data, active_id, macros)
+
+            # Read sector 0 for profile metadata / enabled status
+            sec0 = drv.read_sector(0, 32)
+            enabled_flags = {}
+            for i in range(5):
+                chunk = sec0[i*4 : (i+1)*4] if len(sec0) >= (i+1)*4 else b"\x00"*4
+                pid = (chunk[0] << 8) | chunk[1] if chunk[0] != 0xFF else (i + 1)
+                enabled = chunk[2] if len(chunk) > 2 else 1
+                enabled_flags[pid if pid in range(1, 6) else (i + 1)] = enabled
+
+            config = OnboardConfig(
+                device_name=device_name,
+                count=5,
+                buttons_count=11,
+                gbuttons_count=11,
+                sectors=16,
+                size=255,
+                version=3,
+                active_profile_id=active_id,
+            )
+
+            def decode_btn(chunk):
+                if chunk == b"\xff\xff\xff\xff":
+                    return ButtonAction(behavior=15, action_type=4, value=0)
+                beh = chunk[0]
+                if beh == 0x80:
+                    return ButtonAction(behavior=8, action_type=chunk[1], modifiers=chunk[2], value=chunk[3])
+                elif beh == 0x90:
+                    return ButtonAction(behavior=9, action_type=0, value=chunk[1], data=chunk[3])
+                elif beh == 0x00:
+                    sec = chunk[1]
+                    addr = (chunk[2] << 8) | chunk[3]
+                    mtxt = macros.get(addr)
+                    return ButtonAction(behavior=0, action_type=0, value=0, sector=sec, address=addr, macro_text=mtxt)
+                return ButtonAction(behavior=beh, action_type=chunk[1], modifiers=chunk[2], value=chunk[3])
+
+            for slot_num in range(1, 6):
+                raw = drv.read_sector(slot_num, 240)
+                if not raw or len(raw) < 208:
+                    continue
+
+                report_rate = raw[0]
+                def_dpi = raw[1]
+                shift_dpi = raw[2]
+                dpis = [struct.unpack("<H", raw[3+i*2 : 5+i*2])[0] for i in range(5)]
+                r, g, b = raw[13], raw[14], raw[15]
+                power_mode = raw[16]
+                angle_snap = raw[17]
+
+                raw_buttons = [decode_btn(raw[32+i*4 : 36+i*4]) for i in range(11)]
+                raw_gbuttons = [decode_btn(raw[96+i*4 : 100+i*4]) for i in range(11)]
+                buttons = self._translate_raw_to_ui_buttons(raw_buttons)
+                gbuttons = self._translate_raw_to_ui_buttons(raw_gbuttons)
+
+                raw_name = raw[160:208].decode("utf-16le", errors="ignore").rstrip("\x00").strip("\uffff").strip()
+                if not raw_name or raw_name == "PROFILE_NAME_DEFAULT":
+                    prof_name = f"Profile {slot_num}"
+                else:
+                    prof_name = raw_name
+
+                prof = Profile(
+                    profile_id=slot_num,
+                    sector=slot_num,
+                    enabled=enabled_flags.get(slot_num, 1),
+                    name=prof_name,
+                    report_rate=report_rate,
+                    resolutions=dpis,
+                    resolution_default_index=def_dpi,
+                    resolution_shift_index=shift_dpi,
+                    buttons=buttons,
+                    gbuttons=gbuttons,
+                    angle_snap=angle_snap,
+                    red=r, green=g, blue=b,
+                    power_mode=power_mode,
+                    reserved=raw[20:28] if len(raw) >= 28 else b"\xff"*8
+                )
+                config.profiles[slot_num] = prof
+
+            drv.turn_off_rgb()
+            drv.close()
             return config, "Success"
-        except subprocess.TimeoutExpired:
-            return None, "Device query timed out. Check that the mouse is powered on and within wireless range."
         except Exception as e:
-            return None, f"Failed to read profiles: {str(e)}"
+            return None, f"Failed to read profiles natively: {str(e)}"
 
     def _convert_from_yaml_obj(self, yaml_obj: Any, active_id: int, macro_map: Optional[Dict[int, str]] = None) -> OnboardConfig:
         if macro_map is None:
@@ -330,6 +343,9 @@ class MouseBackend:
                     )
                 )
 
+            btn_actions = self._translate_raw_to_ui_buttons(btn_actions)
+            gbtn_actions = self._translate_raw_to_ui_buttons(gbtn_actions)
+
             prof = Profile(
                 profile_id=pid,
                 sector=getattr(p_raw, "sector", pid),
@@ -356,58 +372,203 @@ class MouseBackend:
 
         return config
 
+    @staticmethod
+    def _build_profile_sector(prof: Profile, base_bytes: Optional[bytes] = None) -> bytes:
+        import struct
+        b = bytearray(base_bytes if base_bytes and len(base_bytes) >= 240 else b"\x00" * 240)
+        b[0] = prof.report_rate & 0xFF
+        b[1] = prof.resolution_default_index & 0xFF
+        b[2] = prof.resolution_shift_index & 0xFF
+        for i in range(5):
+            val = prof.resolutions[i] if i < len(prof.resolutions) else 0
+            b[3 + i*2 : 5 + i*2] = struct.pack("<H", val)
+        # Permanent hardware RGB shutoff
+        b[13] = 0
+        b[14] = 0
+        b[15] = 0
+        b[16] = prof.power_mode & 0xFF
+        b[17] = prof.angle_snap & 0xFF
+        raw_buttons = MouseBackend._translate_ui_to_raw_buttons(prof.buttons)
+        raw_gbuttons = MouseBackend._translate_ui_to_raw_buttons(prof.gbuttons)
+        for i in range(11):
+            if i < len(raw_buttons):
+                btn = raw_buttons[i]
+                if btn.behavior == 8:
+                    chunk = bytes([0x80, btn.action_type & 0xFF, btn.modifiers & 0xFF, btn.value & 0xFF])
+                elif btn.behavior == 9:
+                    chunk = bytes([0x90, btn.value & 0xFF, 0xFF, btn.data & 0xFF])
+                elif btn.behavior == 0:
+                    sec = btn.sector if btn.sector is not None else 6
+                    addr = btn.address if btn.address is not None else 0
+                    chunk = bytes([0x00, sec & 0xFF, (addr >> 8) & 0xFF, addr & 0xFF])
+                elif btn.behavior == 15 or btn.action_type == 4:
+                    chunk = b"\xff\xff\xff\xff"
+                else:
+                    chunk = bytes([btn.behavior & 0xFF, btn.action_type & 0xFF, btn.modifiers & 0xFF, btn.value & 0xFF])
+            else:
+                chunk = b"\xff\xff\xff\xff"
+            b[32 + i*4 : 36 + i*4] = chunk
+        for i in range(11):
+            if i < len(raw_gbuttons):
+                btn = raw_gbuttons[i]
+                if btn.behavior == 8:
+                    chunk = bytes([0x80, btn.action_type & 0xFF, btn.modifiers & 0xFF, btn.value & 0xFF])
+                elif btn.behavior == 9:
+                    chunk = bytes([0x90, btn.value & 0xFF, 0xFF, btn.data & 0xFF])
+                elif btn.behavior == 0:
+                    sec = btn.sector if btn.sector is not None else 6
+                    addr = btn.address if btn.address is not None else 0
+                    chunk = bytes([0x00, sec & 0xFF, (addr >> 8) & 0xFF, addr & 0xFF])
+                elif btn.behavior == 15 or btn.action_type == 4:
+                    chunk = b"\xff\xff\xff\xff"
+                else:
+                    chunk = bytes([btn.behavior & 0xFF, btn.action_type & 0xFF, btn.modifiers & 0xFF, btn.value & 0xFF])
+            else:
+                chunk = b"\xff\xff\xff\xff"
+            b[96 + i*4 : 100 + i*4] = chunk
+        raw_name = prof.name.encode("utf-16le")[:48].ljust(48, b"\x00")
+        b[160:208] = raw_name
+        b[208:240] = b"\x00" * 32
+        return bytes(b[:240])
+
     def write_profiles(self, config: OnboardConfig) -> Tuple[bool, str]:
         """Saves a timestamped backup and burns the updated configuration to mouse flash memory."""
-        if not self.raw_yaml_cache:
-            # Re-read if we don't have base cache
-            _, err = self.read_profiles()
-            if not self.raw_yaml_cache:
-                return False, f"Cannot write without base device read: {err}"
-
-        # Update cache from config model
-        for pid, prof in config.profiles.items():
-            if pid in self.raw_yaml_cache.profiles:
-                p_yaml = self.raw_yaml_cache.profiles[pid]
-                p_yaml.enabled = prof.enabled
-                p_yaml.name = prof.name
-                p_yaml.report_rate = prof.report_rate
-                p_yaml.resolutions = prof.resolutions
-                p_yaml.resolution_default_index = prof.resolution_default_index
-                p_yaml.resolution_shift_index = prof.resolution_shift_index
-
-                # Update buttons
-                p_yaml.buttons = [ButtonYaml(**b.to_yaml_dict()) for b in prof.buttons]
-                p_yaml.gbuttons = [ButtonYaml(**b.to_yaml_dict()) for b in prof.gbuttons]
-
-        # 1. Save timestamped backup
-        ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_file = get_backup_dir() / f"pre_write_{ts}.yaml"
-        yaml_text = yaml.dump(self.raw_yaml_cache, sort_keys=True)
-        with open(backup_file, "w") as f:
-            f.write(yaml_text)
-
-        # 2. Write to temp file for flashing
-        temp_file = Path.home() / ".config" / "logitech-onboard" / "temp_write.yaml"
-        temp_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(temp_file, "w") as f:
-            f.write(yaml_text)
-
-        # 3. Flash to mouse
-        cmd = self._get_solaar_cmd() + ["profiles", self.device_name, str(temp_file)]
         try:
-            res = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
-            # Remove temporary write file
-            if temp_file.exists():
-                temp_file.unlink()
+            drv = NativeHIDPP()
+            if not drv.open():
+                return False, "Could not open mouse on /dev/hidraw"
 
-            output = (res.stdout + "\n" + res.stderr).strip()
-            if "Profiles not written" in output or "FileNotFoundError" in output:
-                return False, f"Failed to write to device:\n{output}"
-            elif "Wrote" in output or res.returncode == 0:
-                # Flashing temporarily leaves onboard mode in Disabled; immediately re-engage active profile
-                self.set_active_profile(config.active_profile_id or 1)
-                return True, f"Successfully saved to mouse memory!\nBackup saved to {backup_file.name}"
-            else:
-                return False, f"Failed to write to device:\n{output}"
+            for pid, prof in config.profiles.items():
+                cur_sector = drv.read_sector(pid, 240)
+                sec_bytes = self._build_profile_sector(prof, cur_sector)
+                drv.write_sector(pid, sec_bytes)
+
+            drv.set_active_profile(config.active_profile_id or 1)
+            drv.turn_off_rgb()
+            drv.close()
+            return True, "Successfully saved to mouse hardware memory!"
         except Exception as e:
             return False, f"Write error: {str(e)}"
+
+    def flash_single_profile(self, slot_num: int, profile_data: dict) -> Tuple[bool, str]:
+        """Flashes a single profile into the designated slot natively without Solaar."""
+        import struct
+        try:
+            drv = NativeHIDPP()
+            if not drv.open():
+                return False, "Could not open mouse on /dev/hidraw"
+
+            base = drv.read_sector(slot_num, 240)
+            b = bytearray(base if base and len(base) >= 240 else b"\x00" * 240)
+
+            rate_ms = 1
+            rr = profile_data.get("report_rate", 1000)
+            if rr == 500: rate_ms = 2
+            elif rr == 250: rate_ms = 4
+            elif rr == 125: rate_ms = 8
+            b[0] = rate_ms & 0xFF
+            b[1] = profile_data.get("resolution_default_index", 0) & 0xFF
+            b[2] = profile_data.get("resolution_shift_index", 0) & 0xFF
+
+            resolutions = profile_data.get("resolutions", [800, 1200, 1600, 2400, 3200])
+            for i in range(5):
+                val = resolutions[i] if i < len(resolutions) else 0
+                b[3 + i*2 : 5 + i*2] = struct.pack("<H", val)
+
+            # RGB = 0
+            b[13] = 0
+            b[14] = 0
+            b[15] = 0
+            b[16] = 255
+            b[17] = 0
+
+            buttons = self._translate_ui_to_raw_buttons(profile_data.get("buttons", []))
+            for i in range(11):
+                if i < len(buttons):
+                    b_item = buttons[i]
+                    if isinstance(b_item, dict):
+                        beh = b_item.get("behavior", 8)
+                        atype = b_item.get("action_type", b_item.get("type", 1))
+                        mods = b_item.get("modifiers", 0)
+                        val = b_item.get("value", 1)
+                        data = b_item.get("data", 0)
+                        sec = b_item.get("sector", 6)
+                        addr = b_item.get("address", 0)
+                    elif hasattr(b_item, "behavior"):
+                        beh = b_item.behavior
+                        atype = b_item.action_type
+                        mods = b_item.modifiers
+                        val = b_item.value
+                        data = b_item.data
+                        sec = b_item.sector if b_item.sector is not None else 6
+                        addr = b_item.address if b_item.address is not None else 0
+                    else:
+                        beh, atype, mods, val, data, sec, addr = 15, 4, 0, 0, 0, 6, 0
+
+                    if beh == 15 or atype == 4:
+                        chunk = b"\xff\xff\xff\xff"
+                    elif beh == 8:
+                        chunk = bytes([0x80, atype & 0xFF, mods & 0xFF, val & 0xFF])
+                    elif beh == 9:
+                        chunk = bytes([0x90, val & 0xFF, 0xFF, data & 0xFF])
+                    elif beh == 0:
+                        chunk = bytes([0x00, sec & 0xFF, (addr >> 8) & 0xFF, addr & 0xFF])
+                    else:
+                        chunk = bytes([beh & 0xFF, atype & 0xFF, mods & 0xFF, val & 0xFF])
+                else:
+                    chunk = b"\xff\xff\xff\xff"
+                b[32 + i*4 : 36 + i*4] = chunk
+
+            gbuttons = self._translate_ui_to_raw_buttons(profile_data.get("gbuttons", []))
+            for i in range(11):
+                if i < len(gbuttons):
+                    b_item = gbuttons[i]
+                    if isinstance(b_item, dict):
+                        beh = b_item.get("behavior", 15)
+                        atype = b_item.get("action_type", b_item.get("type", 4))
+                        mods = b_item.get("modifiers", 0)
+                        val = b_item.get("value", 0)
+                        data = b_item.get("data", 0)
+                        sec = b_item.get("sector", 6)
+                        addr = b_item.get("address", 0)
+                    elif hasattr(b_item, "behavior"):
+                        beh = b_item.behavior
+                        atype = b_item.action_type
+                        mods = b_item.modifiers
+                        val = b_item.value
+                        data = b_item.data
+                        sec = b_item.sector if b_item.sector is not None else 6
+                        addr = b_item.address if b_item.address is not None else 0
+                    else:
+                        beh, atype, mods, val, data, sec, addr = 15, 4, 0, 0, 0, 6, 0
+
+                    if beh == 15 or atype == 4:
+                        chunk = b"\xff\xff\xff\xff"
+                    elif beh == 8:
+                        chunk = bytes([0x80, atype & 0xFF, mods & 0xFF, val & 0xFF])
+                    elif beh == 9:
+                        chunk = bytes([0x90, val & 0xFF, 0xFF, data & 0xFF])
+                    elif beh == 0:
+                        chunk = bytes([0x00, sec & 0xFF, (addr >> 8) & 0xFF, addr & 0xFF])
+                    else:
+                        chunk = bytes([beh & 0xFF, atype & 0xFF, mods & 0xFF, val & 0xFF])
+                else:
+                    chunk = b"\xff\xff\xff\xff"
+                b[96 + i*4 : 100 + i*4] = chunk
+
+            name = profile_data.get("name", f"Profile {slot_num}")
+            raw_name = name.encode("utf-16le")[:48].ljust(48, b"\x00")
+            b[160:208] = raw_name
+            b[208:240] = b"\x00" * 32
+
+            sec_bytes = bytes(b[:240])
+            ok = drv.write_sector(slot_num, sec_bytes)
+            if ok:
+                drv.set_active_profile(slot_num)
+                drv.turn_off_rgb()
+                drv.close()
+                return True, f"Successfully staged Profile to Slot {slot_num}"
+            drv.close()
+            return False, f"Failed writing Profile to Slot {slot_num}"
+        except Exception as e:
+            return False, f"Flash error: {str(e)}"

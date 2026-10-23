@@ -89,6 +89,31 @@ class ButtonAction:
             d["bytes"] = b"\xff\xff\xff\xff"
         return d
 
+    def to_dict(self) -> dict:
+        return {
+            "behavior": self.behavior,
+            "action_type": self.action_type,
+            "value": self.value,
+            "modifiers": self.modifiers,
+            "data": self.data,
+            "sector": self.sector,
+            "address": self.address,
+            "macro_text": self.macro_text,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "ButtonAction":
+        return cls(
+            behavior=d.get("behavior", 8),
+            action_type=d.get("action_type", d.get("type", 1)),
+            value=d.get("value", 1),
+            modifiers=d.get("modifiers", 0),
+            data=d.get("data", 0),
+            sector=d.get("sector"),
+            address=d.get("address"),
+            macro_text=d.get("macro_text"),
+        )
+
 
 @dataclass
 class Profile:
