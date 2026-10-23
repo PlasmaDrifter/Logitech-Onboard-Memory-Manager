@@ -9,7 +9,7 @@ try:
 except ImportError:
     from PyQt6 import QtWidgets, QtCore, QtGui
 
-from core.game_scanner import GameScanner, ScannedGame
+from core.game_scanner import GameScanner, ScannedApp, ScannedGame
 from core.profile_library import ProfileLibraryManager, GameRule, WatcherSettings
 from core.profile_watcher import ProfileWatcher
 from core.service_manager import BackgroundServiceManager
@@ -206,6 +206,9 @@ class GamesTab(QtWidgets.QWidget):
         super().__init__(parent)
         self.watcher = watcher
         self.mgr = watcher.mgr
+        self._current_view_mode = "games"  # 'games' or 'apps'
+        self._all_scanned_games: List[ScannedApp] = []
+        self._all_scanned_apps: List[ScannedApp] = []
         self._init_ui()
         self.reload_data()
 
@@ -374,38 +377,63 @@ class GamesTab(QtWidgets.QWidget):
 
         splitter.addWidget(rules_box)
 
-        # 2. Installed Games Scanner Group (Right Column)
-        scanner_box = QtWidgets.QGroupBox("Installed Games (Steam / Lutris / Heroic / Epic / GOG)")
-        scanner_layout = QtWidgets.QVBoxLayout(scanner_box)
+        # 2. Installed Software Scanner Group (Right Column)
+        self.scanner_box = QtWidgets.QGroupBox("Installed Games & Applications")
+        scanner_layout = QtWidgets.QVBoxLayout(self.scanner_box)
         scanner_layout.setContentsMargins(10, 12, 10, 10)
         scanner_layout.setSpacing(8)
 
+        # View Switcher Row: Games vs Applications
+        view_toggle_row = QtWidgets.QHBoxLayout()
+        view_toggle_row.setSpacing(6)
+
+        self.btn_view_games = QtWidgets.QPushButton("Games (0)")
+        self.btn_view_games.setCheckable(True)
+        self.btn_view_games.setChecked(True)
+        self.btn_view_games.setFixedHeight(28)
+        self.btn_view_games.clicked.connect(self._on_switch_to_games_view)
+
+        self.btn_view_apps = QtWidgets.QPushButton("Applications (0)")
+        self.btn_view_apps.setCheckable(True)
+        self.btn_view_apps.setChecked(False)
+        self.btn_view_apps.setFixedHeight(28)
+        self.btn_view_apps.clicked.connect(self._on_switch_to_apps_view)
+
+        view_toggle_row.addWidget(self.btn_view_games)
+        view_toggle_row.addWidget(self.btn_view_apps)
+        view_toggle_row.addStretch()
+        scanner_layout.addLayout(view_toggle_row)
+
+        # Filter and Rescan Row
         filter_row = QtWidgets.QHBoxLayout()
-        self.edit_search_games = QtWidgets.QLineEdit()
-        self.edit_search_games.setPlaceholderText("Filter games by title or launcher...")
-        self.edit_search_games.textChanged.connect(self._filter_scanned_games)
-        self.btn_rescan = QtWidgets.QPushButton("Scan Games")
+        self.edit_search_items = QtWidgets.QLineEdit()
+        self.edit_search_items.setPlaceholderText("Filter by name, launcher, or window class...")
+        self.edit_search_items.textChanged.connect(self._filter_scanned_items)
+        self.btn_rescan = QtWidgets.QPushButton("Scan Software")
         self.btn_rescan.setObjectName("secondaryBtn")
-        self.btn_rescan.clicked.connect(self._scan_installed_games)
+        self.btn_rescan.clicked.connect(self._scan_installed_software)
         self.lbl_scan_status = QtWidgets.QLabel("Ready")
         self.lbl_scan_status.setStyleSheet("color: #9ca3af; font-size: 12px; margin-left: 8px;")
-        filter_row.addWidget(self.edit_search_games)
+        filter_row.addWidget(self.edit_search_items)
         filter_row.addWidget(self.btn_rescan)
         filter_row.addWidget(self.lbl_scan_status)
         scanner_layout.addLayout(filter_row)
 
         self.table_scanned = QtWidgets.QTableWidget(0, 4)
-        self.table_scanned.setHorizontalHeaderLabels(["Launcher", "Game Title", "App ID / Hint", "Action"])
+        self.table_scanned.setHorizontalHeaderLabels(["Type / Launcher", "Title / Name", "Window Class / ID", "Action"])
         self.table_scanned.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
         self.table_scanned.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.Stretch)
         self.table_scanned.horizontalHeader().setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeMode.Interactive)
-        self.table_scanned.setColumnWidth(2, 110)
+        self.table_scanned.setColumnWidth(2, 130)
         self.table_scanned.horizontalHeader().setSectionResizeMode(3, QtWidgets.QHeaderView.ResizeMode.Fixed)
         self.table_scanned.setColumnWidth(3, 100)
         self.table_scanned.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
         scanner_layout.addWidget(self.table_scanned)
 
-        splitter.addWidget(scanner_box)
+        splitter.addWidget(self.scanner_box)
+
+        # Style toggle buttons
+        self._update_view_toggle_styles()
 
         # Set initial balanced column proportions
         splitter.setStretchFactor(0, 1)
@@ -442,7 +470,7 @@ class GamesTab(QtWidgets.QWidget):
             self.combo_poll_interval.blockSignals(False)
 
         self._populate_rules()
-        self._scan_installed_games()
+        self._scan_installed_software()
         self.refresh_service_status()
 
     def refresh_service_status(self):
@@ -512,44 +540,134 @@ class GamesTab(QtWidgets.QWidget):
             self.mgr.save_rules(rules)
             self.watcher.reload()
 
-    def _scan_installed_games(self):
+    def _update_view_toggle_styles(self):
+        active_style = (
+            "QPushButton {"
+            "   background-color: #0284c7;"
+            "   color: #ffffff;"
+            "   font-weight: bold;"
+            "   border: 1px solid #38bdf8;"
+            "   border-radius: 4px;"
+            "   padding: 4px 12px;"
+            "}"
+        )
+        inactive_style = (
+            "QPushButton {"
+            "   background-color: #1e293b;"
+            "   color: #94a3b8;"
+            "   border: 1px solid #334155;"
+            "   border-radius: 4px;"
+            "   padding: 4px 12px;"
+            "}"
+            "QPushButton:hover {"
+            "   background-color: #334155;"
+            "   color: #f1f5f9;"
+            "}"
+        )
+        if self._current_view_mode == "games":
+            self.btn_view_games.setChecked(True)
+            self.btn_view_games.setStyleSheet(active_style)
+            self.btn_view_apps.setChecked(False)
+            self.btn_view_apps.setStyleSheet(inactive_style)
+            self.scanner_box.setTitle("Installed Games (Steam / Lutris / Heroic / Desktop Games)")
+            self.edit_search_items.setPlaceholderText("Filter games by title, launcher, or window class...")
+        else:
+            self.btn_view_games.setChecked(False)
+            self.btn_view_games.setStyleSheet(inactive_style)
+            self.btn_view_apps.setChecked(True)
+            self.btn_view_apps.setStyleSheet(active_style)
+            self.scanner_box.setTitle("Installed Desktop Applications (FreeDesktop / Flatpak / Snap)")
+            self.edit_search_items.setPlaceholderText("Filter applications by name, category, or window class...")
+
+    def _on_switch_to_games_view(self):
+        self._current_view_mode = "games"
+        self._update_view_toggle_styles()
+        self._filter_scanned_items(self.edit_search_items.text())
+
+    def _on_switch_to_apps_view(self):
+        self._current_view_mode = "apps"
+        self._update_view_toggle_styles()
+        self._filter_scanned_items(self.edit_search_items.text())
+
+    def _scan_installed_software(self):
         self.btn_rescan.setEnabled(False)
-        self.lbl_scan_status.setText("Scanning Steam, Lutris, and Heroic...")
-        self.lbl_scan_status.setStyleSheet("color: #3b82f6; font-size: 12px; font-weight: bold; margin-left: 8px;")
+        self.lbl_scan_status.setText("Scanning system for games and applications...")
+        self.lbl_scan_status.setStyleSheet("color: #38bdf8; font-size: 12px; font-weight: bold; margin-left: 8px;")
         QtWidgets.QApplication.processEvents()
 
         def do_scan():
-            games = GameScanner.get_all_games()
+            games, apps = GameScanner.get_scanned_items()
             self._all_scanned_games = games
-            self._display_scanned_games(games)
-            self.lbl_scan_status.setText(f"Found {len(games)} games")
+            self._all_scanned_apps = apps
+
+            self.btn_view_games.setText(f"Games ({len(games)})")
+            self.btn_view_apps.setText(f"Applications ({len(apps)})")
+
+            self._filter_scanned_items(self.edit_search_items.text())
+            self.lbl_scan_status.setText(f"Discovered {len(games)} games and {len(apps)} apps")
             self.lbl_scan_status.setStyleSheet("color: #4ade80; font-size: 12px; font-weight: bold; margin-left: 8px;")
             self.btn_rescan.setEnabled(True)
 
         QtCore.QTimer.singleShot(50, do_scan)
 
-    def _filter_scanned_games(self, text: str):
-        if not hasattr(self, "_all_scanned_games"):
-            return
+    def _filter_scanned_items(self, text: str = ""):
+        current_list = self._all_scanned_games if self._current_view_mode == "games" else self._all_scanned_apps
         query = text.strip().lower()
+        if not query:
+            self._display_scanned_items(current_list)
+            return
+
         filtered = [
-            g for g in self._all_scanned_games
-            if query in g.title.lower() or query in g.launcher.lower() or query in g.window_class_hint.lower()
+            item for item in current_list
+            if (query in item.title.lower() or
+                query in item.launcher.lower() or
+                query in (item.window_class_hint or "").lower() or
+                query in (item.category or "").lower() or
+                query in item.app_id.lower())
         ]
-        self._display_scanned_games(filtered)
+        self._display_scanned_items(filtered)
 
-    def _display_scanned_games(self, games: List[ScannedGame]):
+    def _display_scanned_items(self, items: List[ScannedApp]):
         self.table_scanned.setRowCount(0)
-        for row, g in enumerate(games):
+        for row, item in enumerate(items):
             self.table_scanned.insertRow(row)
-            self.table_scanned.setItem(row, 0, QtWidgets.QTableWidgetItem(g.launcher))
-            self.table_scanned.setItem(row, 1, QtWidgets.QTableWidgetItem(g.title))
-            self.table_scanned.setItem(row, 2, QtWidgets.QTableWidgetItem(g.window_class_hint or g.app_id))
+            
+            # Column 0: Launcher / Type / Category
+            type_label = f"{item.launcher}"
+            if item.item_type == "app" and item.category and item.category != "Application":
+                type_label = f"{item.launcher} • {item.category}"
+            self.table_scanned.setItem(row, 0, QtWidgets.QTableWidgetItem(type_label))
+            
+            # Column 1: Title / Name
+            self.table_scanned.setItem(row, 1, QtWidgets.QTableWidgetItem(item.title))
+            
+            # Column 2: Window class hint or app ID
+            self.table_scanned.setItem(row, 2, QtWidgets.QTableWidgetItem(item.window_class_hint or item.app_id))
 
+            # Column 3: Add Rule Button
             btn_add = QtWidgets.QPushButton("+ Add Rule")
             btn_add.setStyleSheet("padding: 2px 8px; font-size: 11px;")
-            btn_add.clicked.connect(lambda _, game=g: self._on_add_rule_from_game(game))
+            btn_add.clicked.connect(lambda _, it=item: self._on_add_rule_from_scanned_item(it))
             self.table_scanned.setCellWidget(row, 3, btn_add)
+
+    def _on_add_rule_from_scanned_item(self, item: ScannedApp):
+        unique_prof = self.mgr.get_unique_profile_filename(item.title)
+        rule = GameRule(
+            name=item.title,
+            pattern=item.window_class_hint or item.title.lower(),
+            target_slot=5,
+            profile_name=unique_prof,
+            enabled=True,
+        )
+        dlg = RuleEditDialog(self, mgr=self.mgr, rule=rule, is_new=True)
+        if dlg.exec():
+            new_rule = dlg.get_rule()
+            new_rule = self._create_and_save_rule_profile(new_rule, is_new=True)
+            rules = self.mgr.get_rules()
+            rules.append(new_rule)
+            self.mgr.save_rules(rules)
+            self._populate_rules()
+            self.watcher.reload()
 
     def _create_and_save_rule_profile(self, rule: GameRule, is_new: bool = True) -> GameRule:
         """Ensures that for Slot 5, a dedicated, new profile JSON is created on disk and never reuses other profiles."""
@@ -567,24 +685,8 @@ class GamesTab(QtWidgets.QWidget):
                 self.mgr.save_profile_to_library(unique_filename, p_dict)
         return rule
 
-    def _on_add_rule_from_game(self, game: ScannedGame):
-        unique_prof = self.mgr.get_unique_profile_filename(game.title)
-        rule = GameRule(
-            name=game.title,
-            pattern=game.window_class_hint or game.title.lower(),
-            target_slot=5,
-            profile_name=unique_prof,
-            enabled=True,
-        )
-        dlg = RuleEditDialog(self, mgr=self.mgr, rule=rule, is_new=True)
-        if dlg.exec():
-            new_rule = dlg.get_rule()
-            new_rule = self._create_and_save_rule_profile(new_rule, is_new=True)
-            rules = self.mgr.get_rules()
-            rules.append(new_rule)
-            self.mgr.save_rules(rules)
-            self._populate_rules()
-            self.watcher.reload()
+    def _on_add_rule_from_game(self, game: ScannedApp):
+        self._on_add_rule_from_scanned_item(game)
 
     def _on_add_rule(self):
         dlg = RuleEditDialog(self, mgr=self.mgr, is_new=True)
