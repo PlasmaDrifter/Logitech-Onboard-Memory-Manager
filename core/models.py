@@ -120,8 +120,8 @@ def create_default_buttons() -> List[ButtonAction]:
     - Button 1: Left Click
     - Button 2: Right Click
     - Button 3: Middle Click
-    - Button 9: Scroll Wheel Tilt Left
-    - Button 10: Scroll Wheel Tilt Right
+    - Button 7: Scroll Wheel Tilt Left
+    - Button 8: Scroll Wheel Tilt Right
     All other buttons disabled (blank).
     """
     return [
@@ -131,10 +131,10 @@ def create_default_buttons() -> List[ButtonAction]:
         ButtonAction.disabled(),      # B4: Blank
         ButtonAction.disabled(),      # B5: Blank
         ButtonAction.disabled(),      # B6: Blank
-        ButtonAction.disabled(),      # B7: Blank
-        ButtonAction.disabled(),      # B8: Blank
-        ButtonAction.function(0x4A),  # B9: Scroll Wheel Tilt Left
-        ButtonAction.function(0x4B),  # B10: Scroll Wheel Tilt Right
+        ButtonAction.function(0x4A),  # B7: Scroll Wheel Tilt Left
+        ButtonAction.function(0x4B),  # B8: Scroll Wheel Tilt Right
+        ButtonAction.disabled(),      # B9: Blank
+        ButtonAction.disabled(),      # B10: Blank
         ButtonAction.disabled(),      # B11: Blank
     ]
 

@@ -23,10 +23,10 @@ FACTORY_RAW_CHUNKS = [
     b"\xff\xff\xff\xff",              # Chunk 3: Blank (B4)
     b"\xff\xff\xff\xff",              # Chunk 4: Blank (B6)
     b"\xff\xff\xff\xff",              # Chunk 5: Blank (B5)
-    b"\xff\xff\xff\xff",              # Chunk 6: Blank (B7)
-    b"\xff\xff\xff\xff",              # Chunk 7: Blank (B8)
-    bytes([0x90, 0x4A, 0xFF, 0x00]),  # Chunk 8: Scroll Wheel Tilt Left (B9)
-    bytes([0x90, 0x4B, 0xFF, 0x00]),  # Chunk 9: Scroll Wheel Tilt Right (B10)
+    bytes([0x90, 0x4A, 0xFF, 0x00]),  # Chunk 6: Scroll Wheel Tilt Left (B7)
+    bytes([0x90, 0x4B, 0xFF, 0x00]),  # Chunk 7: Scroll Wheel Tilt Right (B8)
+    b"\xff\xff\xff\xff",              # Chunk 8: Blank (B9)
+    b"\xff\xff\xff\xff",              # Chunk 9: Blank (B10)
     b"\xff\xff\xff\xff",              # Chunk 10: Blank (B11)
 ]
 
