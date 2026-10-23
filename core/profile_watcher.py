@@ -131,6 +131,11 @@ class ProfileWatcher:
         return None
 
     def _watch_loop(self) -> None:
+        try:
+            self.backend.enforce_lighting_state()
+        except Exception as le:
+            logger.debug(f"Initial lighting enforcement error: {le}")
+
         while self._running:
             if not self.settings.enabled:
                 time.sleep(1.0)

@@ -220,12 +220,81 @@ class MouseBackend:
             pass
         return 1
 
+    def enforce_lighting_state(self, drv: Optional[NativeHIDPP] = None, force_auto_off: Optional[bool] = None) -> bool:
+        """Enforces the user's configured RGB lighting preference (e.g. keeping RGB off or applying active effect)."""
+        import configparser
+        conf_path = Path.home() / ".config" / "LogitechLinux" / "OnboardMemoryManager.conf"
+        auto_off = False
+        effect_mode = "off"
+        color_hex = "#00aeef"
+        brightness = 100
+        speed_ms = 5000
+        waveform = 6
+
+        if conf_path.exists():
+            cp = configparser.ConfigParser()
+            try:
+                cp.read(str(conf_path))
+                section = "General" if "General" in cp else (cp.sections()[0] if cp.sections() else None)
+                if section:
+                    sec = cp[section]
+                    if "auto_turn_off_rgb" in sec:
+                        auto_off = sec.getboolean("auto_turn_off_rgb")
+                    if "rgb_effect_mode" in sec:
+                        effect_mode = sec.get("rgb_effect_mode", "off").lower()
+                    if "rgb_color_hex" in sec:
+                        color_hex = sec.get("rgb_color_hex", "#00aeef")
+                    if "rgb_brightness" in sec:
+                        brightness = sec.getint("rgb_brightness", 100)
+                    if "rgb_speed_ms" in sec:
+                        speed_ms = sec.getint("rgb_speed_ms", 5000)
+                    if "rgb_waveform" in sec:
+                        waveform = sec.getint("rgb_waveform", 6)
+            except Exception:
+                pass
+
+        if force_auto_off is not None:
+            auto_off = force_auto_off
+
+        needs_close = False
+        if drv is None:
+            drv = NativeHIDPP()
+            if not drv.open():
+                return False
+            needs_close = True
+
+        try:
+            if auto_off or effect_mode == "off":
+                return drv.turn_off_rgb()
+            elif effect_mode in ("static", "breathing", "cycle"):
+                c_hex = color_hex.lstrip("#")
+                try:
+                    r = int(c_hex[0:2], 16) if len(c_hex) >= 2 else 0
+                    g = int(c_hex[2:4], 16) if len(c_hex) >= 4 else 174
+                    b = int(c_hex[4:6], 16) if len(c_hex) >= 6 else 239
+                except Exception:
+                    r, g, b = 0, 174, 239
+                return drv.set_rgb_effect(
+                    effect_type=effect_mode,
+                    r=r, g=g, b=b,
+                    brightness=brightness,
+                    period_ms=speed_ms,
+                    waveform=waveform,
+                    persistent=False
+                )
+            return True
+        finally:
+            if needs_close:
+                drv.close()
+
     def set_active_profile(self, profile_num: int) -> Tuple[bool, str]:
         """Switches the mouse's active onboard profile."""
         try:
             drv = NativeHIDPP()
             if drv.open():
                 ok = drv.set_active_profile(profile_num)
+                if ok:
+                    self.enforce_lighting_state(drv)
                 drv.close()
                 if ok:
                     return True, f"Active profile set to Profile {profile_num}"
@@ -549,8 +618,7 @@ class MouseBackend:
                 drv.write_sector(pid, sec_bytes)
 
             drv.set_active_profile(config.active_profile_id or 1)
-            if auto_turn_off_rgb:
-                drv.turn_off_rgb()
+            self.enforce_lighting_state(drv, force_auto_off=auto_turn_off_rgb)
             drv.close()
             return True, "Successfully saved to mouse hardware memory!"
         except Exception as e:
@@ -671,6 +739,7 @@ class MouseBackend:
             ok = drv.write_sector(slot_num, sec_bytes)
             if ok:
                 drv.set_active_profile(slot_num)
+                self.enforce_lighting_state(drv)
                 drv.close()
                 return True, f"Successfully staged Profile to Slot {slot_num}"
             drv.close()
