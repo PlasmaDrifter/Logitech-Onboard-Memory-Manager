@@ -44,7 +44,7 @@ A native Linux Onboard Memory Manager and full **Logitech G HUB replacement** fo
 
 ### Option 1: AppImage (Recommended)
 
-Download the latest standalone executable from the [Releases](https://github.com/PlasmaDrifter/Logitech-Onboard-Memory-Manager/releases) page:
+Download the latest standalone executable from the [Releases](https://github.com/PlasmaDrifter/OMM-Linux/releases) page:
 
 ```bash
 chmod +x OMM-Linux-v0.9.4-x86_64.AppImage
@@ -56,8 +56,8 @@ chmod +x OMM-Linux-v0.9.4-x86_64.AppImage
 Requirements: Python 3.10+ and PySide6 (`pip install PySide6 pyyaml`).
 
 ```bash
-git clone https://github.com/PlasmaDrifter/Logitech-Onboard-Memory-Manager.git
-cd Logitech-Onboard-Memory-Manager
+git clone https://github.com/PlasmaDrifter/OMM-Linux.git
+cd OMM-Linux
 ./main.py
 ```
 
