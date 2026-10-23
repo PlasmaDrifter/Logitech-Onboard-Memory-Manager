@@ -57,6 +57,10 @@ RestartSec=3
 WantedBy=default.target
 """
         try:
+            if service_path.exists():
+                existing = service_path.read_text(encoding="utf-8")
+                if existing == unit_content:
+                    return True
             service_path.write_text(unit_content, encoding="utf-8")
             subprocess.run(["systemctl", "--user", "daemon-reload"], capture_output=True, timeout=5)
             return True

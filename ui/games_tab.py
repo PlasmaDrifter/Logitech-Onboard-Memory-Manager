@@ -237,7 +237,7 @@ class GamesTab(QtWidgets.QWidget):
         top_bar.setSpacing(12)
 
         self.chk_enable_autoswitch = QtWidgets.QCheckBox("Enable Automatic Profile Switching (Game Lock Active)")
-        self.chk_enable_autoswitch.setStyleSheet("font-weight: bold; font-size: 13px; color: #38bdf8;")
+        self.chk_enable_autoswitch.setObjectName("enableProfileChk")
         self.chk_enable_autoswitch.toggled.connect(self._on_toggle_autoswitch)
         top_bar.addWidget(self.chk_enable_autoswitch)
 
@@ -306,7 +306,7 @@ class GamesTab(QtWidgets.QWidget):
         svc_layout.addSpacing(14)
 
         self.chk_svc_autostart = QtWidgets.QCheckBox("Automatically start service on boot / login")
-        self.chk_svc_autostart.setStyleSheet("font-size: 12px; color: #cbd5e1;")
+        self.chk_svc_autostart.setObjectName("enableProfileChk")
         self.chk_svc_autostart.toggled.connect(self._on_toggle_svc_autostart)
         svc_layout.addWidget(self.chk_svc_autostart)
 
@@ -341,22 +341,14 @@ class GamesTab(QtWidgets.QWidget):
         r_btns_layout = QtWidgets.QVBoxLayout()
         r_btns_layout.setSpacing(6)
 
+        # Row 1: Edit Buttons, + Add Rule, Edit Rule, Delete Rule
         r_btns_row1 = QtWidgets.QHBoxLayout()
+        r_btns_row1.setSpacing(6)
         self.btn_edit_buttons = QtWidgets.QPushButton("Edit Buttons")
         self.btn_edit_buttons.setToolTip("Customize mouse buttons for the selected game rule")
         self.btn_edit_buttons.clicked.connect(self._on_edit_buttons_for_rule)
         self.btn_add_rule = QtWidgets.QPushButton("+ Add Rule")
         self.btn_add_rule.clicked.connect(self._on_add_rule)
-        self.btn_capture_rule = QtWidgets.QPushButton("Capture Active Window")
-        self.btn_capture_rule.setObjectName("secondaryBtn")
-        self.btn_capture_rule.clicked.connect(self._on_capture_quick)
-
-        r_btns_row1.addWidget(self.btn_edit_buttons)
-        r_btns_row1.addWidget(self.btn_add_rule)
-        r_btns_row1.addWidget(self.btn_capture_rule)
-        r_btns_row1.addStretch()
-
-        r_btns_row2 = QtWidgets.QHBoxLayout()
         self.btn_edit_rule = QtWidgets.QPushButton("Edit Rule")
         self.btn_edit_rule.setObjectName("secondaryBtn")
         self.btn_edit_rule.clicked.connect(self._on_edit_rule)
@@ -364,9 +356,20 @@ class GamesTab(QtWidgets.QWidget):
         self.btn_delete_rule.setObjectName("secondaryBtn")
         self.btn_delete_rule.clicked.connect(self._on_delete_rule)
 
-        r_btns_row2.addWidget(self.btn_edit_rule)
-        r_btns_row2.addWidget(self.btn_delete_rule)
+        r_btns_row1.addWidget(self.btn_edit_buttons)
+        r_btns_row1.addWidget(self.btn_add_rule)
+        r_btns_row1.addWidget(self.btn_edit_rule)
+        r_btns_row1.addWidget(self.btn_delete_rule)
+        r_btns_row1.addStretch()
+
+        # Row 2: Capture Active Window all the way to the right
+        r_btns_row2 = QtWidgets.QHBoxLayout()
+        self.btn_capture_rule = QtWidgets.QPushButton("Capture Active Window")
+        self.btn_capture_rule.setObjectName("secondaryBtn")
+        self.btn_capture_rule.clicked.connect(self._on_capture_quick)
+
         r_btns_row2.addStretch()
+        r_btns_row2.addWidget(self.btn_capture_rule)
 
         r_btns_layout.addLayout(r_btns_row1)
         r_btns_layout.addLayout(r_btns_row2)

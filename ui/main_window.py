@@ -661,10 +661,55 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Append Games / Auto-Switching Tab
         if hasattr(self, "games_tab") and self.games_tab:
-            self.tab_widget.addTab(self.games_tab, "Game Profiles")
+            games_idx = self.tab_widget.addTab(self.games_tab, "Game Profiles")
+            btn_help = QtWidgets.QToolButton()
+            btn_help.setText("?")
+            btn_help.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+            btn_help.setToolTip("How does Profile Auto-Switching work?")
+            btn_help.setStyleSheet("""
+                QToolButton {
+                    color: #94a3b8;
+                    background: #1e293b;
+                    border: 1px solid #334155;
+                    border-radius: 9px;
+                    font-weight: bold;
+                    font-size: 11px;
+                    min-width: 18px;
+                    max-width: 18px;
+                    min-height: 18px;
+                    max-height: 18px;
+                    margin-left: 4px;
+                    margin-right: 4px;
+                }
+                QToolButton:hover {
+                    color: #ffffff;
+                    background: #2563eb;
+                    border-color: #3b82f6;
+                }
+            """)
+            btn_help.clicked.connect(self._show_autoswitch_help)
+            self.tab_widget.tabBar().setTabButton(games_idx, QtWidgets.QTabBar.ButtonPosition.RightSide, btn_help)
 
         if 0 <= curr_tab < self.tab_widget.count():
             self.tab_widget.setCurrentIndex(curr_tab)
+
+    def _show_autoswitch_help(self):
+        msg = QtWidgets.QMessageBox(self)
+        msg.setWindowTitle("Profile Auto-Switching Guide")
+        msg.setTextFormat(QtCore.Qt.TextFormat.RichText)
+        msg.setText("""
+        <h3 style="color: #38bdf8; margin-top: 0; margin-bottom: 8px;">How to Configure Profile Auto-Switching</h3>
+        <ol style="line-height: 1.6; margin-left: -20px;">
+          <li><b>Add a Game Rule:</b> Select your game from the installed list on the right and click <b>+ Add Rule</b>, or click <b>Capture Active Window</b> while your game is open.</li>
+          <li><b>Set Your Bindings:</b> Select the rule and click <b>Edit Buttons</b> to configure custom keys, DPI stages, or macros for that specific game.</li>
+          <li><b>Auto-Switch While Playing:</b> Whenever you launch or Alt-Tab into that game, OMM instantly activates that game profile on your mouse (dynamically staged into Slot 5).</li>
+          <li><b>Return to Desktop:</b> Whenever you leave the game, your mouse immediately returns to your default desktop profile (Slot 1).</li>
+        </ol>
+        <p style="color: #94a3b8; font-size: 12px; margin-top: 8px; margin-bottom: 0;">
+          <b>Background Autostart:</b> Check <i>"Automatically start service on boot / login"</i> so auto-switching runs silently in the background without needing to keep the window open.
+        </p>
+        """)
+        msg.exec()
 
     def _create_profile_tab(self, prof: Profile) -> QtWidgets.QWidget:
         tab = QtWidgets.QWidget()
