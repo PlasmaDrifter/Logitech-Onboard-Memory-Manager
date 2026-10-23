@@ -36,7 +36,10 @@ fi
 echo "Installed icons."
 
 # 3. Install .desktop entry
-cp "${SCRIPT_DIR}/assets/omm.desktop" "${APP_DIR}/omm.desktop"
+sed -e "s|^Exec=.*|Exec=${BIN_DIR}/omm|" \
+    -e "s|^Icon=.*|Icon=${ICON_DIR}/omm.svg|" \
+    "${SCRIPT_DIR}/assets/omm.desktop" > "${APP_DIR}/omm.desktop"
+chmod +x "${APP_DIR}/omm.desktop"
 echo "Installed desktop entry to: ${APP_DIR}/omm.desktop"
 
 # 4. Refresh icon and desktop caches if utilities are available
