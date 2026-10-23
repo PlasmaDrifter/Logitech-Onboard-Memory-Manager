@@ -32,6 +32,11 @@ class ProfileWatcher:
         self._charging_enforce_countdown: int = 0
         self._last_charging_check: float = 0.0
 
+        # Automatic file modification tracking
+        self._last_rules_mtime: float = self.mgr.rules_file.stat().st_mtime if self.mgr.rules_file.exists() else 0.0
+        self._last_settings_mtime: float = self.mgr.settings_file.stat().st_mtime if self.mgr.settings_file.exists() else 0.0
+        self._staged_slot5_mtime: float = 0.0
+
         # Callbacks for GUI updates
         self.on_profile_switched: Optional[Callable[[int, Optional[str]], None]] = None
 
@@ -55,6 +60,19 @@ class ProfileWatcher:
         """Reloads settings and rules from disk without stopping the thread."""
         self.settings = self.mgr.get_settings()
         self.rules = self.mgr.get_rules()
+
+    def _check_config_mtime(self) -> None:
+        """Automatically detects on-disk changes to rules and settings and reloads them."""
+        try:
+            r_mtime = self.mgr.rules_file.stat().st_mtime if self.mgr.rules_file.exists() else 0.0
+            s_mtime = self.mgr.settings_file.stat().st_mtime if self.mgr.settings_file.exists() else 0.0
+            if r_mtime != self._last_rules_mtime or s_mtime != self._last_settings_mtime:
+                self._last_rules_mtime = r_mtime
+                self._last_settings_mtime = s_mtime
+                self.reload()
+                logger.info(f"Auto-reloaded rules & settings from disk ({len(self.rules)} rules active)")
+        except Exception as e:
+            logger.debug(f"Config mtime check error: {e}")
 
     def get_active_window_info(self) -> tuple[str, str]:
         """Retrieves (window_class, window_title) on KDE Wayland or X11."""
@@ -168,6 +186,7 @@ class ProfileWatcher:
             logger.debug(f"Initial lighting enforcement error: {le}")
 
         while self._running:
+            self._check_config_mtime()
             if not self.settings.enabled:
                 time.sleep(1.0)
                 continue
@@ -235,9 +254,11 @@ class ProfileWatcher:
             # Dynamic staging slot
             staged = self.settings.staged_slot5_profile
             req_profile = rule.profile_name
+            p_file = self.mgr.library_dir / req_profile
+            file_mtime = p_file.stat().st_mtime if p_file.exists() else 0.0
 
-            if staged == req_profile:
-                # Already staged! Instant switch (<5ms, 0 flash writes)
+            if staged == req_profile and file_mtime <= self._staged_slot5_mtime:
+                # Already staged and up-to-date! Instant switch (<5ms, 0 flash writes)
                 if self._last_active_slot != 5:
                     logger.info(f"Switching to already staged Slot 5 for {rule.name} ({req_profile})")
                     self.backend.set_active_profile(5)
@@ -246,14 +267,16 @@ class ProfileWatcher:
                     if self.on_profile_switched:
                         self.on_profile_switched(5, rule.name)
             else:
-                # Different overflow game! Flash profile to Slot 5
-                logger.info(f"Staging new profile '{req_profile}' into Slot 5 for {rule.name}")
+                # Different overflow game or profile modified on disk! Flash profile to Slot 5
+                logger.info(f"Staging profile '{req_profile}' into Slot 5 for {rule.name}")
                 p_data = self.mgr.load_profile_from_library(req_profile)
                 if p_data:
                     ok, msg = self.backend.flash_single_profile(5, p_data)
                     if ok:
                         self.settings.staged_slot5_profile = req_profile
+                        self._staged_slot5_mtime = file_mtime
                         self.mgr.save_settings(self.settings)
+                        self._last_settings_mtime = self.mgr.settings_file.stat().st_mtime if self.mgr.settings_file.exists() else 0.0
                         self._last_active_slot = 5
                         self._current_matched_rule = rule
                         if self.on_profile_switched:

@@ -56,7 +56,7 @@ class WorkerThread(QtCore.QThread):
             self.finished_signal.emit(False, str(e))
 
 
-APP_VERSION = "v0.9.0"
+APP_VERSION = "v0.9.1"
 
 
 class MainWindow(QtWidgets.QMainWindow):
