@@ -190,12 +190,18 @@ class NativeHIDPP:
                 return (p_resp[4] << 8) | p_resp[5]
         return 1
 
-    def set_active_profile(self, profile_num: int) -> bool:
+    def set_active_profile(self, profile_num: int, force_cycle: bool = True) -> bool:
+        import time
         idx = self.discover_feature(FEATURE_ONBOARD_PROFILES)
         if not idx:
             return False
         # Enable onboard mode (0x11, param 0x01)
         self.request(idx, 0x11, bytes([0x01]))
+        if force_cycle:
+            # Momentarily switch away so firmware microcontroller flushes internal cache
+            alt = 2 if profile_num == 1 else 1
+            self.request(idx, 0x31, bytes([(alt >> 8) & 0xFF, alt & 0xFF]))
+            time.sleep(0.15)
         # Set profile (0x31, 2-byte profile sector)
         res = self.request(idx, 0x31, bytes([(profile_num >> 8) & 0xFF, profile_num & 0xFF]))
         return res is not None
