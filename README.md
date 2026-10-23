@@ -89,12 +89,6 @@ To cleanly remove desktop integration, command launcher symlinks, and background
 ```
 The output file will be generated in `dist/OMM-v0.9.8-x86_64.AppImage`.
 
-### Building a Standalone Binary
-```bash
-./build_standalone.sh
-```
-The single-file binary will be generated in `dist/omm`.
-
 ---
 
 ## Hardware Permissions (udev)
