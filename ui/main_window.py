@@ -325,11 +325,10 @@ class MainWindow(QtWidgets.QMainWindow):
         bottom_layout.addWidget(self.btn_turn_off_rgb)
 
         auto_off_saved = self.qsettings.value("auto_turn_off_rgb", False, type=bool)
-        self.chk_auto_turn_off_rgb = QtWidgets.QCheckBox("Auto-turn off RGB on save")
+        self.chk_auto_turn_off_rgb = QtWidgets.QCheckBox("Auto-turn off RGB (save & charge)")
+        self.chk_auto_turn_off_rgb.setToolTip("Automatically keeps RGB lighting turned off when saving, switching profiles, or charging the mouse.")
         self.chk_auto_turn_off_rgb.setChecked(auto_off_saved)
-        self.chk_auto_turn_off_rgb.toggled.connect(
-            lambda val: self.qsettings.setValue("auto_turn_off_rgb", val)
-        )
+        self.chk_auto_turn_off_rgb.toggled.connect(self._on_auto_turn_off_rgb_toggled)
         bottom_layout.addWidget(self.chk_auto_turn_off_rgb)
 
         min_tray_saved = self.qsettings.value("minimize_to_tray_on_close", True, type=bool)
@@ -457,6 +456,11 @@ class MainWindow(QtWidgets.QMainWindow):
             self.action_tray_minimize.blockSignals(True)
             self.action_tray_minimize.setChecked(checked)
             self.action_tray_minimize.blockSignals(False)
+
+    def _on_auto_turn_off_rgb_toggled(self, checked: bool):
+        self.qsettings.setValue("auto_turn_off_rgb", checked)
+        if checked:
+            self.backend.enforce_lighting_state()
 
     def _update_tray_profile_checked(self, active_pid: int):
         if hasattr(self, "tray_profile_actions"):

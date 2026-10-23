@@ -5,6 +5,7 @@ import subprocess
 import logging
 import threading
 from typing import Optional, Callable
+from pathlib import Path
 from .profile_library import ProfileLibraryManager, GameRule, WatcherSettings
 from .backend import MouseBackend, prune_backups
 
@@ -25,6 +26,11 @@ class ProfileWatcher:
         self._current_matched_rule: Optional[GameRule] = None
         self._last_prune_time: float = 0.0
         self._prune_interval_sec: float = 3600.0  # Hourly scheduled pruning
+
+        # Battery / charging state tracking
+        self._last_battery_status: Optional[str] = None
+        self._charging_enforce_countdown: int = 0
+        self._last_charging_check: float = 0.0
 
         # Callbacks for GUI updates
         self.on_profile_switched: Optional[Callable[[int, Optional[str]], None]] = None
@@ -128,6 +134,25 @@ class ProfileWatcher:
                 if p in wc_lower or p in wt_lower:
                     return rule
 
+    @staticmethod
+    def _get_battery_status() -> Optional[str]:
+        """Reads kernel power supply status for connected Logitech mouse."""
+        ps = Path("/sys/class/power_supply")
+        if not ps.exists():
+            return None
+        try:
+            for p in sorted(ps.glob("hidpp_battery_*")):
+                sf = p / "status"
+                if sf.exists():
+                    return sf.read_text().strip()
+            for p in ps.glob("*"):
+                mfg = p / "manufacturer"
+                if mfg.exists() and "logitech" in mfg.read_text().lower():
+                    sf = p / "status"
+                    if sf.exists():
+                        return sf.read_text().strip()
+        except Exception:
+            pass
         return None
 
     def _watch_loop(self) -> None:
@@ -142,14 +167,34 @@ class ProfileWatcher:
                 continue
 
             try:
-                # Scheduled backup pruning (runs on startup and every hour)
                 now = time.time()
+
+                # Scheduled backup pruning (runs on startup and every hour)
                 if now - self._last_prune_time >= self._prune_interval_sec:
                     self._last_prune_time = now
                     try:
                         prune_backups(50)
                     except Exception as pe:
                         logger.debug(f"Periodic backup pruning error: {pe}")
+
+                # Battery charging status monitoring & RGB enforcement
+                b_status = self._get_battery_status()
+                if b_status is not None:
+                    if b_status != self._last_battery_status:
+                        logger.info(f"Mouse battery status changed: {self._last_battery_status} -> {b_status}")
+                        self._last_battery_status = b_status
+                        self.backend.enforce_lighting_state()
+                        if b_status == "Charging":
+                            self._charging_enforce_countdown = 3
+                    elif b_status == "Charging":
+                        if self._charging_enforce_countdown > 0:
+                            self._charging_enforce_countdown -= 1
+                            self.backend.enforce_lighting_state()
+                        elif now - self._last_charging_check >= 10.0:
+                            self._last_charging_check = now
+                            self.backend.enforce_lighting_state()
+                else:
+                    self._last_battery_status = None
 
                 win_class, win_title = self.get_active_window_info()
                 rule = self._match_active_rule(win_class, win_title)
