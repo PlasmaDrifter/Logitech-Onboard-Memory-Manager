@@ -97,15 +97,20 @@ class ProfileWatcher:
         if not combined:
             return None
 
+        # Do not match launcher client windows (Steam store/library, Lutris, Heroic)
+        LAUNCHER_CLASSES = {"steam", "lutris", "heroic", "com.heroicgameslauncher.hgl"}
+        if wc_lower in LAUNCHER_CLASSES:
+            return None
+
         for rule in self.rules:
             if not rule.enabled:
                 continue
             p = rule.pattern.lower().strip()
             name_p = rule.name.lower().strip()
-            # Match on pattern or game title in either window class or window title
-            if p and (p in wc_lower or p in wt_lower or wc_lower in p):
+            # Match on pattern in window class or title (pattern must be part of window, NOT reverse)
+            if p and (p in wc_lower or p in wt_lower):
                 return rule
-            if name_p and (name_p in wt_lower or name_p in wc_lower):
+            if name_p and len(name_p) >= 3 and (name_p in wt_lower or name_p in wc_lower):
                 return rule
         return None
 
