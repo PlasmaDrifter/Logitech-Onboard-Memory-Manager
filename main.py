@@ -5,8 +5,8 @@ Native GUI tool to view, edit, and flash button mappings and DPI settings
 directly to the onboard flash memory of Logitech gaming mice.
 """
 
-import sys
 import os
+import sys
 from pathlib import Path
 
 # Ensure local modules can be loaded when running standalone
@@ -17,6 +17,7 @@ if str(script_dir) not in sys.path:
 # Set OS-level process name to 'omm' so tools like ps, top, and system monitors display 'omm'
 try:
     import ctypes
+
     libc = ctypes.CDLL("libc.so.6")
     PR_SET_NAME = 15
     libc.prctl(PR_SET_NAME, b"omm", 0, 0, 0)
@@ -24,13 +25,15 @@ except Exception:
     pass
 
 try:
-    from PySide6 import QtWidgets, QtCore, QtGui
+    from PySide6 import QtWidgets
 except ImportError:
     try:
-        from PyQt6 import QtWidgets, QtCore, QtGui
+        from PyQt6 import QtWidgets
     except ImportError:
         print("Error: PySide6 or PyQt6 is required to run this application.")
-        print("Install via: pip install PySide6 (or use your distribution package manager)")
+        print(
+            "Install via: pip install PySide6 (or use your distribution package manager)"
+        )
         sys.exit(1)
 
 from ui.main_window import MainWindow
@@ -38,10 +41,13 @@ from ui.main_window import MainWindow
 
 def run_daemon():
     """Runs the ProfileWatcher in headless background mode."""
-    import time
-    import signal
     import logging
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+    import signal
+    import time
+
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    )
     from core.profile_watcher import ProfileWatcher
 
     watcher = ProfileWatcher()

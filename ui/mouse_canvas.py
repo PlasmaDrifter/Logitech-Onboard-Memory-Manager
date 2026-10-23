@@ -1,7 +1,8 @@
 """Interactive visual mouse diagram supporting multiple Logitech mouse model variations."""
 
+from typing import Any, ClassVar
+
 from PySide6 import QtCore, QtGui, QtWidgets
-from typing import Dict, Optional, Tuple
 
 
 class MouseCanvas(QtWidgets.QWidget):
@@ -12,104 +13,332 @@ class MouseCanvas(QtWidgets.QWidget):
 
     # Hotspot definitions per model family on a 540x540 virtual canvas
     # Each entry defines: pos=(badge_x, badge_y), target=(switch_x, switch_y), tag="Label", box_w=width
-    MODEL_BUTTONS = {
+    MODEL_BUTTONS: ClassVar[dict[str, dict[int, dict[str, Any]]]] = {
         "g502": {
-            1: {"tag": "B1: Left Click", "pos": (205, 138), "target": (225, 138), "box_w": 95},
-            2: {"tag": "B2: Right Click", "pos": (445, 125), "target": (335, 125), "box_w": 100},
-            3: {"tag": "B3: Middle Click", "pos": (270, 85), "target": (270, 85), "box_w": 105},
-            6: {"tag": "B6: Front", "pos": (68, 185), "target": (156, 185), "box_w": 95},
-            5: {"tag": "B5: Middle", "pos": (68, 250), "target": (153, 250), "box_w": 95},
+            1: {
+                "tag": "B1: Left Click",
+                "pos": (205, 138),
+                "target": (225, 138),
+                "box_w": 95,
+            },
+            2: {
+                "tag": "B2: Right Click",
+                "pos": (445, 125),
+                "target": (335, 125),
+                "box_w": 100,
+            },
+            3: {
+                "tag": "B3: Middle Click",
+                "pos": (270, 85),
+                "target": (270, 85),
+                "box_w": 105,
+            },
+            6: {
+                "tag": "B6: Front",
+                "pos": (68, 185),
+                "target": (156, 185),
+                "box_w": 95,
+            },
+            5: {
+                "tag": "B5: Middle",
+                "pos": (68, 250),
+                "target": (153, 250),
+                "box_w": 95,
+            },
             4: {"tag": "B4: Back", "pos": (68, 315), "target": (149, 315), "box_w": 95},
-            7: {"tag": "B7: Tilt ◀", "pos": (175, 25), "target": (248, 75), "box_w": 80},
-            8: {"tag": "B8: Tilt ▶", "pos": (365, 25), "target": (292, 75), "box_w": 80},
-            9: {"tag": "B9: Profile", "pos": (270, 185), "target": (270, 185), "box_w": 90},
-            10: {"tag": "B10: G7 (DPI-)", "pos": (68, 65), "target": (172, 68), "box_w": 95},
-            11: {"tag": "B11: G8 (DPI+)", "pos": (68, 122), "target": (167, 110), "box_w": 95},
+            7: {
+                "tag": "B7: Tilt ◀",
+                "pos": (175, 25),
+                "target": (248, 75),
+                "box_w": 80,
+            },
+            8: {
+                "tag": "B8: Tilt ▶",
+                "pos": (365, 25),
+                "target": (292, 75),
+                "box_w": 80,
+            },
+            9: {
+                "tag": "B9: Profile",
+                "pos": (270, 185),
+                "target": (270, 185),
+                "box_w": 90,
+            },
+            10: {
+                "tag": "B10: G7 (DPI-)",
+                "pos": (68, 65),
+                "target": (172, 68),
+                "box_w": 95,
+            },
+            11: {
+                "tag": "B11: G8 (DPI+)",
+                "pos": (68, 122),
+                "target": (167, 110),
+                "box_w": 95,
+            },
         },
         "gpro": {
-            1: {"tag": "B1: Left Click", "pos": (205, 135), "target": (205, 135), "box_w": 105},
-            2: {"tag": "B2: Right Click", "pos": (415, 125), "target": (335, 125), "box_w": 110},
-            3: {"tag": "B3: Wheel Press", "pos": (270, 95), "target": (270, 95), "box_w": 115},
-            4: {"tag": "B4: Thumb Back", "pos": (85, 260), "target": (172, 260), "box_w": 112},
-            5: {"tag": "B5: Thumb Fwd", "pos": (85, 195), "target": (174, 195), "box_w": 112},
+            1: {
+                "tag": "B1: Left Click",
+                "pos": (205, 135),
+                "target": (205, 135),
+                "box_w": 105,
+            },
+            2: {
+                "tag": "B2: Right Click",
+                "pos": (415, 125),
+                "target": (335, 125),
+                "box_w": 110,
+            },
+            3: {
+                "tag": "B3: Wheel Press",
+                "pos": (270, 95),
+                "target": (270, 95),
+                "box_w": 115,
+            },
+            4: {
+                "tag": "B4: Thumb Back",
+                "pos": (85, 260),
+                "target": (172, 260),
+                "box_w": 112,
+            },
+            5: {
+                "tag": "B5: Thumb Fwd",
+                "pos": (85, 195),
+                "target": (174, 195),
+                "box_w": 112,
+            },
         },
         "g305": {
-            1: {"tag": "B1: Left Click", "pos": (205, 135), "target": (205, 135), "box_w": 105},
-            2: {"tag": "B2: Right Click", "pos": (415, 125), "target": (335, 125), "box_w": 110},
-            3: {"tag": "B3: Wheel Press", "pos": (270, 95), "target": (270, 95), "box_w": 115},
-            4: {"tag": "B4: Thumb Back", "pos": (85, 265), "target": (178, 265), "box_w": 112},
-            5: {"tag": "B5: Thumb Fwd", "pos": (85, 205), "target": (180, 205), "box_w": 112},
+            1: {
+                "tag": "B1: Left Click",
+                "pos": (205, 135),
+                "target": (205, 135),
+                "box_w": 105,
+            },
+            2: {
+                "tag": "B2: Right Click",
+                "pos": (415, 125),
+                "target": (335, 125),
+                "box_w": 110,
+            },
+            3: {
+                "tag": "B3: Wheel Press",
+                "pos": (270, 95),
+                "target": (270, 95),
+                "box_w": 115,
+            },
+            4: {
+                "tag": "B4: Thumb Back",
+                "pos": (85, 265),
+                "target": (178, 265),
+                "box_w": 112,
+            },
+            5: {
+                "tag": "B5: Thumb Fwd",
+                "pos": (85, 205),
+                "target": (180, 205),
+                "box_w": 112,
+            },
             6: {"tag": "B6: DPI", "pos": (270, 175), "target": (270, 175), "box_w": 85},
         },
         "g703": {
-            1: {"tag": "B1: Left Click", "pos": (205, 135), "target": (205, 135), "box_w": 105},
-            2: {"tag": "B2: Right Click", "pos": (420, 125), "target": (340, 125), "box_w": 110},
-            3: {"tag": "B3: Wheel Press", "pos": (270, 95), "target": (270, 95), "box_w": 115},
-            4: {"tag": "B4: Thumb Back", "pos": (85, 275), "target": (176, 275), "box_w": 112},
-            5: {"tag": "B5: Thumb Fwd", "pos": (85, 210), "target": (178, 210), "box_w": 112},
+            1: {
+                "tag": "B1: Left Click",
+                "pos": (205, 135),
+                "target": (205, 135),
+                "box_w": 105,
+            },
+            2: {
+                "tag": "B2: Right Click",
+                "pos": (420, 125),
+                "target": (340, 125),
+                "box_w": 110,
+            },
+            3: {
+                "tag": "B3: Wheel Press",
+                "pos": (270, 95),
+                "target": (270, 95),
+                "box_w": 115,
+            },
+            4: {
+                "tag": "B4: Thumb Back",
+                "pos": (85, 275),
+                "target": (176, 275),
+                "box_w": 112,
+            },
+            5: {
+                "tag": "B5: Thumb Fwd",
+                "pos": (85, 210),
+                "target": (178, 210),
+                "box_w": 112,
+            },
             6: {"tag": "B6: DPI", "pos": (270, 175), "target": (270, 175), "box_w": 85},
         },
         "g903": {
-            1: {"tag": "B1: Left Click", "pos": (200, 125), "target": (200, 125), "box_w": 105},
-            2: {"tag": "B2: Right Click", "pos": (340, 125), "target": (340, 125), "box_w": 105},
-            3: {"tag": "B3: Wheel Press", "pos": (270, 90), "target": (270, 90), "box_w": 115},
-            4: {"tag": "B4: L-Back", "pos": (85, 270), "target": (182, 270), "box_w": 95},
-            5: {"tag": "B5: L-Fwd", "pos": (85, 205), "target": (182, 205), "box_w": 95},
-            6: {"tag": "B6: R-Back", "pos": (455, 270), "target": (358, 270), "box_w": 95},
-            7: {"tag": "B7: R-Fwd", "pos": (455, 205), "target": (358, 205), "box_w": 95},
-            8: {"tag": "B8: Tilt ◀", "pos": (195, 42), "target": (252, 85), "box_w": 85},
-            9: {"tag": "B9: Tilt ▶", "pos": (345, 42), "target": (288, 85), "box_w": 85},
-            10: {"tag": "B10: DPI-", "pos": (270, 155), "target": (270, 155), "box_w": 85},
-            11: {"tag": "B11: DPI+", "pos": (270, 195), "target": (270, 195), "box_w": 85},
+            1: {
+                "tag": "B1: Left Click",
+                "pos": (200, 125),
+                "target": (200, 125),
+                "box_w": 105,
+            },
+            2: {
+                "tag": "B2: Right Click",
+                "pos": (340, 125),
+                "target": (340, 125),
+                "box_w": 105,
+            },
+            3: {
+                "tag": "B3: Wheel Press",
+                "pos": (270, 90),
+                "target": (270, 90),
+                "box_w": 115,
+            },
+            4: {
+                "tag": "B4: L-Back",
+                "pos": (85, 270),
+                "target": (182, 270),
+                "box_w": 95,
+            },
+            5: {
+                "tag": "B5: L-Fwd",
+                "pos": (85, 205),
+                "target": (182, 205),
+                "box_w": 95,
+            },
+            6: {
+                "tag": "B6: R-Back",
+                "pos": (455, 270),
+                "target": (358, 270),
+                "box_w": 95,
+            },
+            7: {
+                "tag": "B7: R-Fwd",
+                "pos": (455, 205),
+                "target": (358, 205),
+                "box_w": 95,
+            },
+            8: {
+                "tag": "B8: Tilt ◀",
+                "pos": (195, 42),
+                "target": (252, 85),
+                "box_w": 85,
+            },
+            9: {
+                "tag": "B9: Tilt ▶",
+                "pos": (345, 42),
+                "target": (288, 85),
+                "box_w": 85,
+            },
+            10: {
+                "tag": "B10: DPI-",
+                "pos": (270, 155),
+                "target": (270, 155),
+                "box_w": 85,
+            },
+            11: {
+                "tag": "B11: DPI+",
+                "pos": (270, 195),
+                "target": (270, 195),
+                "box_w": 85,
+            },
         },
         "g604": {
-            1: {"tag": "B1: Left Click", "pos": (205, 125), "target": (205, 125), "box_w": 105},
-            2: {"tag": "B2: Right Click", "pos": (420, 125), "target": (340, 125), "box_w": 110},
-            3: {"tag": "B3: Wheel Press", "pos": (270, 90), "target": (270, 90), "box_w": 115},
+            1: {
+                "tag": "B1: Left Click",
+                "pos": (205, 125),
+                "target": (205, 125),
+                "box_w": 105,
+            },
+            2: {
+                "tag": "B2: Right Click",
+                "pos": (420, 125),
+                "target": (340, 125),
+                "box_w": 110,
+            },
+            3: {
+                "tag": "B3: Wheel Press",
+                "pos": (270, 90),
+                "target": (270, 90),
+                "box_w": 115,
+            },
             4: {"tag": "B4: G4", "pos": (70, 215), "target": (175, 215), "box_w": 80},
             5: {"tag": "B5: G5", "pos": (70, 260), "target": (170, 260), "box_w": 80},
             6: {"tag": "B6: G6", "pos": (70, 305), "target": (168, 305), "box_w": 80},
             7: {"tag": "B7: G7", "pos": (70, 170), "target": (180, 175), "box_w": 80},
             8: {"tag": "B8: G8", "pos": (148, 160), "target": (185, 200), "box_w": 80},
             9: {"tag": "B9: G9", "pos": (148, 345), "target": (175, 290), "box_w": 80},
-            10: {"tag": "B10: Tilt ◀", "pos": (195, 42), "target": (250, 85), "box_w": 85},
-            11: {"tag": "B11: Tilt ▶", "pos": (345, 42), "target": (290, 85), "box_w": 85},
-            12: {"tag": "B12: DPI-", "pos": (270, 155), "target": (270, 155), "box_w": 85},
-            13: {"tag": "B13: DPI+", "pos": (270, 195), "target": (270, 195), "box_w": 85},
-            14: {"tag": "B14: Prof", "pos": (270, 235), "target": (270, 235), "box_w": 85},
-            15: {"tag": "B15: BT", "pos": (270, 275), "target": (270, 275), "box_w": 85},
+            10: {
+                "tag": "B10: Tilt ◀",
+                "pos": (195, 42),
+                "target": (250, 85),
+                "box_w": 85,
+            },
+            11: {
+                "tag": "B11: Tilt ▶",
+                "pos": (345, 42),
+                "target": (290, 85),
+                "box_w": 85,
+            },
+            12: {
+                "tag": "B12: DPI-",
+                "pos": (270, 155),
+                "target": (270, 155),
+                "box_w": 85,
+            },
+            13: {
+                "tag": "B13: DPI+",
+                "pos": (270, 195),
+                "target": (270, 195),
+                "box_w": 85,
+            },
+            14: {
+                "tag": "B14: Prof",
+                "pos": (270, 235),
+                "target": (270, 235),
+                "box_w": 85,
+            },
+            15: {
+                "tag": "B15: BT",
+                "pos": (270, 275),
+                "target": (270, 275),
+                "box_w": 85,
+            },
         },
     }
 
     def __init__(self, parent=None, model_key: str = "g502"):
         super().__init__(parent)
         self.setMinimumSize(480, 520)
-        self.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Expanding)
+        self.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Expanding,
+            QtWidgets.QSizePolicy.Policy.Expanding,
+        )
         self.setMouseTracking(True)
 
         self.model_key = model_key
-        self.selected_button: Optional[int] = None
-        self.hovered_button: Optional[int] = None
-        self._button_rects: Dict[int, QtCore.QRectF] = {}
-        self.custom_actions: Dict[int, str] = {}
+        self.selected_button: int | None = None
+        self.hovered_button: int | None = None
+        self._button_rects: dict[int, QtCore.QRectF] = {}
+        self.custom_actions: dict[int, str] = {}
 
-    def set_button_actions(self, actions: Dict[int, str]):
+    def set_button_actions(self, actions: dict[int, str]):
         """Sets user-assigned action names for each button and refreshes display."""
         self.custom_actions = actions
         self.update()
 
     def _get_button_tag(self, b_num: int, default_tag: str) -> str:
-        if b_num in self.custom_actions and self.custom_actions[b_num]:
+        if self.custom_actions.get(b_num):
             action_name = self.custom_actions[b_num]
             if action_name.startswith(f"B{b_num}:"):
-                display = action_name[len(f"B{b_num}:"):].strip()
+                display = action_name[len(f"B{b_num}:") :].strip()
             else:
                 display = action_name.strip()
 
             # Remove any "Macro: " or "Macro" prefix
             for pfx in ("Macro: ", "Macro:", "Macro "):
                 if display.startswith(pfx):
-                    display = display[len(pfx):].strip()
+                    display = display[len(pfx) :].strip()
                     break
 
             display = display.replace(" (Sniper)", "")
@@ -123,7 +352,7 @@ class MouseCanvas(QtWidgets.QWidget):
             self.hovered_button = None
             self.update()
 
-    def set_selected_button(self, button_num: Optional[int]):
+    def set_selected_button(self, button_num: int | None):
         if self.selected_button != button_num:
             self.selected_button = button_num
             self.update()
@@ -138,7 +367,11 @@ class MouseCanvas(QtWidgets.QWidget):
 
         if found != self.hovered_button:
             self.hovered_button = found
-            self.setCursor(QtCore.Qt.CursorShape.PointingHandCursor if found else QtCore.Qt.CursorShape.ArrowCursor)
+            self.setCursor(
+                QtCore.Qt.CursorShape.PointingHandCursor
+                if found
+                else QtCore.Qt.CursorShape.ArrowCursor
+            )
             self.update()
 
     def leaveEvent(self, event: QtCore.QEvent):
@@ -176,7 +409,9 @@ class MouseCanvas(QtWidgets.QWidget):
         # Dark Canvas Background
         painter.fillRect(0, 0, w, h, QtGui.QColor("#13151b"))
 
-        buttons_dict = self.MODEL_BUTTONS.get(self.model_key, self.MODEL_BUTTONS["g502"])
+        buttons_dict = self.MODEL_BUTTONS.get(
+            self.model_key, self.MODEL_BUTTONS["g502"]
+        )
 
         # Base bounds of mouse chassis
         min_x, max_x = 120.0, 400.0
@@ -411,7 +646,9 @@ class MouseCanvas(QtWidgets.QWidget):
         self._button_rects.clear()
         tx = painter.combinedTransform()
 
-        buttons_dict = self.MODEL_BUTTONS.get(self.model_key, self.MODEL_BUTTONS["g502"])
+        buttons_dict = self.MODEL_BUTTONS.get(
+            self.model_key, self.MODEL_BUTTONS["g502"]
+        )
 
         for b_num, info in buttons_dict.items():
             cx, cy = info["pos"]
@@ -420,8 +657,8 @@ class MouseCanvas(QtWidgets.QWidget):
             text_w = fm.horizontalAdvance(tag)
             box_w = max(info.get("box_w", 80), text_w + 16)
             box_h = 28
-            is_selected = (self.selected_button == b_num)
-            is_hovered = (self.hovered_button == b_num)
+            is_selected = self.selected_button == b_num
+            is_hovered = self.hovered_button == b_num
 
             rect = QtCore.QRectF(cx - box_w / 2.0, cy - box_h / 2.0, box_w, box_h)
 
@@ -451,7 +688,9 @@ class MouseCanvas(QtWidgets.QWidget):
                 pen_line = QtGui.QPen(
                     line_color,
                     1.8 if (is_selected or is_hovered) else 1.2,
-                    QtCore.Qt.PenStyle.SolidLine if is_selected else QtCore.Qt.PenStyle.DashLine,
+                    QtCore.Qt.PenStyle.SolidLine
+                    if is_selected
+                    else QtCore.Qt.PenStyle.DashLine,
                 )
                 painter.setPen(pen_line)
                 painter.drawLine(QtCore.QPointF(cx, cy), QtCore.QPointF(tx_pt, ty_pt))
@@ -469,4 +708,3 @@ class MouseCanvas(QtWidgets.QWidget):
 
             painter.setPen(QtGui.QPen(text_color))
             painter.drawText(rect, QtCore.Qt.AlignmentFlag.AlignCenter, tag)
-

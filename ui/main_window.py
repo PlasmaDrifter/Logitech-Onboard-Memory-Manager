@@ -1,29 +1,25 @@
 """Main Window for Logitech Onboard Memory GUI."""
 
-import os
-import sys
 from pathlib import Path
-from typing import Optional
 
 try:
-    from PySide6 import QtWidgets, QtCore, QtGui
+    from PySide6 import QtCore, QtGui, QtWidgets
 except ImportError:
-    from PyQt6 import QtWidgets, QtCore, QtGui
+    from PyQt6 import QtCore, QtGui, QtWidgets
 
 from core.backend import MouseBackend, get_backup_dir, prune_backups
-from core.models import OnboardConfig, Profile, ButtonAction
 from core.keycodes import (
-    G502_BUTTON_LABELS,
     SUPPORTED_MODELS,
     detect_mouse_model,
     get_button_labels,
 )
-from ui.button_editor_dialog import ButtonEditorDialog
-from ui.mouse_canvas import MouseCanvas
-from ui.games_tab import GamesTab
-from ui.rgb_dialog import RGBLightingDialog
+from core.models import OnboardConfig, Profile
 from core.profile_watcher import ProfileWatcher
 from core.service_manager import BackgroundServiceManager
+from ui.button_editor_dialog import ButtonEditorDialog
+from ui.games_tab import GamesTab
+from ui.mouse_canvas import MouseCanvas
+from ui.rgb_dialog import RGBLightingDialog
 
 
 class WorkerThread(QtCore.QThread):
@@ -61,6 +57,7 @@ APP_VERSION = "v0.9.8"
 
 class HtmlTabBar(QtWidgets.QTabBar):
     """Custom tab bar that supports HTML-formatted rich text in tab labels."""
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._html_texts = {}
@@ -93,7 +90,9 @@ class HtmlTabBar(QtWidgets.QTabBar):
             if i in self._html_texts:
                 html = self._html_texts[i]
                 opt.text = ""
-                painter.drawControl(QtWidgets.QStyle.ControlElement.CE_TabBarTabShape, opt)
+                painter.drawControl(
+                    QtWidgets.QStyle.ControlElement.CE_TabBarTabShape, opt
+                )
                 doc = QtGui.QTextDocument()
                 f = self.font()
                 if self.currentIndex() == i:
@@ -115,7 +114,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         self.backend = MouseBackend("G502")
-        self.config: Optional[OnboardConfig] = None
+        self.config: OnboardConfig | None = None
         self.current_gshift_mode = False
         self.current_model_key = "g502"
 
@@ -127,7 +126,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.qsettings.setValue(key, old_settings.value(key))
 
         self.force_quit = False
-        self.tray_icon: Optional[QtWidgets.QSystemTrayIcon] = None
+        self.tray_icon: QtWidgets.QSystemTrayIcon | None = None
         self.tray_profile_actions = {}
 
         self.watcher = ProfileWatcher(backend=self.backend)
@@ -157,9 +156,16 @@ class MainWindow(QtWidgets.QMainWindow):
         if hasattr(self, "chk_minimize_to_tray"):
             min_to_tray = self.chk_minimize_to_tray.isChecked()
         elif hasattr(self, "qsettings"):
-            min_to_tray = self.qsettings.value("minimize_to_tray_on_close", True, type=bool)
+            min_to_tray = self.qsettings.value(
+                "minimize_to_tray_on_close", True, type=bool
+            )
 
-        if self.tray_icon and self.tray_icon.isVisible() and min_to_tray and not self.force_quit:
+        if (
+            self.tray_icon
+            and self.tray_icon.isVisible()
+            and min_to_tray
+            and not self.force_quit
+        ):
             event.ignore()
             self.hide()
             if hasattr(self, "action_show_hide"):
@@ -170,7 +176,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     "OMM",
                     "Application is minimized to the system tray.",
                     QtWidgets.QSystemTrayIcon.MessageIcon.Information,
-                    2500
+                    2500,
                 )
                 self.qsettings.setValue("tray_hint_shown", True)
             return
@@ -183,12 +189,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def changeEvent(self, event: QtCore.QEvent):
         super().changeEvent(event)
-        if event.type() == QtCore.QEvent.Type.WindowStateChange:
-            if hasattr(self, "action_show_hide"):
-                if self.isMinimized() or not self.isVisible():
-                    self.action_show_hide.setText("Show OMM")
-                else:
-                    self.action_show_hide.setText("Hide OMM")
+        if event.type() == QtCore.QEvent.Type.WindowStateChange and hasattr(
+            self, "action_show_hide"
+        ):
+            if self.isMinimized() or not self.isVisible():
+                self.action_show_hide.setText("Show OMM")
+            else:
+                self.action_show_hide.setText("Hide OMM")
 
     def hideEvent(self, event: QtGui.QHideEvent):
         super().hideEvent(event)
@@ -201,7 +208,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.action_show_hide.setText("Hide OMM")
 
     def _setup_styling(self):
-        check_icon = Path(__file__).resolve().parent.parent / "assets" / "checkbox_check.svg"
+        check_icon = (
+            Path(__file__).resolve().parent.parent / "assets" / "checkbox_check.svg"
+        )
         check_icon_str = str(check_icon).replace("\\", "/")
         css = """
             QMainWindow {
@@ -328,10 +337,12 @@ class MainWindow(QtWidgets.QMainWindow):
         # Header bar
         header_layout = QtWidgets.QHBoxLayout()
         title_box = QtWidgets.QVBoxLayout()
-        
+
         app_title_row = QtWidgets.QHBoxLayout()
         self.app_title_lbl = QtWidgets.QLabel("OMM")
-        self.app_title_lbl.setStyleSheet("font-size: 16px; font-weight: bold; color: #ffffff;")
+        self.app_title_lbl.setStyleSheet(
+            "font-size: 16px; font-weight: bold; color: #ffffff;"
+        )
         self.version_badge = QtWidgets.QLabel(f" {APP_VERSION} ")
         self.version_badge.setStyleSheet(
             "background-color: #2e3440; color: #8892b0; font-size: 12px; font-weight: bold; "
@@ -342,10 +353,12 @@ class MainWindow(QtWidgets.QMainWindow):
         app_title_row.addStretch()
 
         self.device_title = QtWidgets.QLabel("Detecting device...")
-        self.device_title.setStyleSheet("font-size: 13px; color: #60a5fa; font-weight: bold;")
+        self.device_title.setStyleSheet(
+            "font-size: 13px; color: #60a5fa; font-weight: bold;"
+        )
         self.device_status = QtWidgets.QLabel("Status: Checking device...")
         self.device_status.setStyleSheet("color: #9ca3af; font-size: 11px;")
-        
+
         title_box.addLayout(app_title_row)
         title_box.addWidget(self.device_title)
         title_box.addWidget(self.device_status)
@@ -389,7 +402,9 @@ class MainWindow(QtWidgets.QMainWindow):
         # Bottom Bar: Mode, Backups & Status
         bottom_layout = QtWidgets.QHBoxLayout()
 
-        self.btn_activate_profile = QtWidgets.QPushButton("Set Profile as Active on Mouse")
+        self.btn_activate_profile = QtWidgets.QPushButton(
+            "Set Profile as Active on Mouse"
+        )
         self.btn_activate_profile.setObjectName("secondaryBtn")
         self.btn_activate_profile.clicked.connect(self.on_set_active_profile)
         bottom_layout.addWidget(self.btn_activate_profile)
@@ -410,13 +425,19 @@ class MainWindow(QtWidgets.QMainWindow):
         bottom_layout.addWidget(self.btn_turn_off_rgb)
 
         auto_off_saved = self.qsettings.value("auto_turn_off_rgb", False, type=bool)
-        self.chk_auto_turn_off_rgb = QtWidgets.QCheckBox("Auto-turn off RGB (save & charge)")
-        self.chk_auto_turn_off_rgb.setToolTip("Automatically keeps RGB lighting turned off when saving, switching profiles, or charging the mouse.")
+        self.chk_auto_turn_off_rgb = QtWidgets.QCheckBox(
+            "Auto-turn off RGB (save & charge)"
+        )
+        self.chk_auto_turn_off_rgb.setToolTip(
+            "Automatically keeps RGB lighting turned off when saving, switching profiles, or charging the mouse."
+        )
         self.chk_auto_turn_off_rgb.setChecked(auto_off_saved)
         self.chk_auto_turn_off_rgb.toggled.connect(self._on_auto_turn_off_rgb_toggled)
         bottom_layout.addWidget(self.chk_auto_turn_off_rgb)
 
-        min_tray_saved = self.qsettings.value("minimize_to_tray_on_close", True, type=bool)
+        min_tray_saved = self.qsettings.value(
+            "minimize_to_tray_on_close", True, type=bool
+        )
         self.chk_minimize_to_tray = QtWidgets.QCheckBox("Minimize to tray on close")
         self.chk_minimize_to_tray.setChecked(min_tray_saved)
         self.chk_minimize_to_tray.toggled.connect(self._on_chk_minimize_toggled)
@@ -434,10 +455,18 @@ class MainWindow(QtWidgets.QMainWindow):
         if not QtWidgets.QSystemTrayIcon.isSystemTrayAvailable():
             return
 
-        tray_icon_path = Path(__file__).resolve().parent.parent / "assets" / "tray_icon.svg"
+        tray_icon_path = (
+            Path(__file__).resolve().parent.parent / "assets" / "tray_icon.svg"
+        )
         if not tray_icon_path.exists():
-            tray_icon_path = Path(__file__).resolve().parent.parent / "assets" / "icon.svg"
-        icon = QtGui.QIcon(str(tray_icon_path)) if tray_icon_path.exists() else self.windowIcon()
+            tray_icon_path = (
+                Path(__file__).resolve().parent.parent / "assets" / "icon.svg"
+            )
+        icon = (
+            QtGui.QIcon(str(tray_icon_path))
+            if tray_icon_path.exists()
+            else self.windowIcon()
+        )
 
         self.tray_icon = QtWidgets.QSystemTrayIcon(icon, self)
         self.tray_icon.setToolTip("OMM")
@@ -458,7 +487,9 @@ class MainWindow(QtWidgets.QMainWindow):
         for pid in range(1, 6):
             act = QtGui.QAction(f"Profile {pid}", self)
             act.setCheckable(True)
-            act.triggered.connect(lambda checked, p=pid: self._on_tray_profile_selected(p))
+            act.triggered.connect(
+                lambda checked, p=pid: self._on_tray_profile_selected(p)
+            )
             self.tray_profile_group.addAction(act)
             profiles_menu.addAction(act)
             self.tray_profile_actions[pid] = act
@@ -526,7 +557,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.device_status.setText(f"Active Profile set to Profile {pid}.")
             self._update_tray_profile_checked(pid)
         else:
-            QtWidgets.QMessageBox.warning(self, "Profile Switch", f"Could not switch to Profile {pid}:\n{msg}")
+            QtWidgets.QMessageBox.warning(
+                self, "Profile Switch", f"Could not switch to Profile {pid}:\n{msg}"
+            )
 
     def _on_tray_minimize_toggled(self, checked: bool):
         self.qsettings.setValue("minimize_to_tray_on_close", checked)
@@ -575,7 +608,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.device_status.setText(msg)
             QtWidgets.QMessageBox.information(self, "Lighting Off", msg)
         else:
-            QtWidgets.QMessageBox.warning(self, "Lighting", f"Could not turn off lighting:\n{msg}")
+            QtWidgets.QMessageBox.warning(
+                self, "Lighting", f"Could not turn off lighting:\n{msg}"
+            )
 
     def on_read_from_mouse(self):
         self.device_status.setText("Reading configuration from mouse...")
@@ -593,13 +628,17 @@ class MainWindow(QtWidgets.QMainWindow):
         config = getattr(self.worker, "result_obj", None)
         if not success or not config:
             self.device_status.setText(f"Error: {msg}")
-            QtWidgets.QMessageBox.warning(self, "Read Error", f"Could not read from mouse:\n\n{msg}")
+            QtWidgets.QMessageBox.warning(
+                self, "Read Error", f"Could not read from mouse:\n\n{msg}"
+            )
             return
 
         self.config = config
         self.device_title.setText(f"{config.device_name} (Onboard Memory)")
         self.device_status.setText("Connected and synchronized.")
-        self.lbl_active_info.setText(f"Active Profile on Mouse: Profile {config.active_profile_id}")
+        self.lbl_active_info.setText(
+            f"Active Profile on Mouse: Profile {config.active_profile_id}"
+        )
         self._update_tray_profile_checked(config.active_profile_id)
 
         # Auto-detect mouse model and update combo selector
@@ -636,16 +675,20 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.config and prof.profile_id == self.config.active_profile_id:
             label += ' (<span style="color: #4ade80; font-weight: bold;">Active</span>)'
         elif prof.enabled:
-            label += ' (<span style="color: #60a5fa; font-weight: bold;">Enabled</span>)'
+            label += (
+                ' (<span style="color: #60a5fa; font-weight: bold;">Enabled</span>)'
+            )
         else:
             label += ' (<span style="color: #9ca3af;">Disabled</span>)'
         return label
 
-    def _rebuild_tabs(self, target_index: Optional[int] = None):
+    def _rebuild_tabs(self, target_index: int | None = None):
         if not self.config:
             return
 
-        curr_tab = self.tab_widget.currentIndex() if target_index is None else target_index
+        curr_tab = (
+            self.tab_widget.currentIndex() if target_index is None else target_index
+        )
         if hasattr(self, "tab_bar") and hasattr(self.tab_bar, "clearHtmlTexts"):
             self.tab_bar.clearHtmlTexts()
         self.tab_widget.clear()
@@ -688,7 +731,9 @@ class MainWindow(QtWidgets.QMainWindow):
                 }
             """)
             btn_help.clicked.connect(self._show_autoswitch_help)
-            self.tab_widget.tabBar().setTabButton(games_idx, QtWidgets.QTabBar.ButtonPosition.RightSide, btn_help)
+            self.tab_widget.tabBar().setTabButton(
+                games_idx, QtWidgets.QTabBar.ButtonPosition.RightSide, btn_help
+            )
 
         if 0 <= curr_tab < self.tab_widget.count():
             self.tab_widget.setCurrentIndex(curr_tab)
@@ -725,7 +770,9 @@ class MainWindow(QtWidgets.QMainWindow):
         chk_enabled = QtWidgets.QCheckBox("Enable Profile in Mouse Memory")
         chk_enabled.setObjectName("enableProfileChk")
         chk_enabled.setChecked(bool(prof.enabled))
-        chk_enabled.toggled.connect(lambda val, p=prof: self._on_profile_enabled_toggled(p, val))
+        chk_enabled.toggled.connect(
+            lambda val, p=prof: self._on_profile_enabled_toggled(p, val)
+        )
         settings_box.addWidget(chk_enabled)
 
         settings_box.addSpacing(20)
@@ -733,13 +780,22 @@ class MainWindow(QtWidgets.QMainWindow):
         # Polling Rate
         settings_box.addWidget(QtWidgets.QLabel("Polling Rate:"))
         combo_rate = QtWidgets.QComboBox()
-        rate_map = {1: "1000 Hz (1ms)", 2: "500 Hz (2ms)", 4: "250 Hz (4ms)", 8: "125 Hz (8ms)"}
+        rate_map = {
+            1: "1000 Hz (1ms)",
+            2: "500 Hz (2ms)",
+            4: "250 Hz (4ms)",
+            8: "125 Hz (8ms)",
+        }
         for code, text in rate_map.items():
             combo_rate.addItem(text, code)
         idx = combo_rate.findData(prof.report_rate)
         if idx >= 0:
             combo_rate.setCurrentIndex(idx)
-        combo_rate.currentIndexChanged.connect(lambda idx, p=prof, cb=combo_rate: self._on_rate_changed(p, cb.currentData()))
+        combo_rate.currentIndexChanged.connect(
+            lambda idx, p=prof, cb=combo_rate: self._on_rate_changed(
+                p, cb.currentData()
+            )
+        )
         settings_box.addWidget(combo_rate)
 
         settings_box.addStretch()
@@ -764,7 +820,9 @@ class MainWindow(QtWidgets.QMainWindow):
         # Left: Interactive Mouse Visualizer
         canvas_container = QtWidgets.QFrame()
         canvas_container.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
-        canvas_container.setStyleSheet("background-color: #13151b; border: 1px solid #2e2e38; border-radius: 6px;")
+        canvas_container.setStyleSheet(
+            "background-color: #13151b; border: 1px solid #2e2e38; border-radius: 6px;"
+        )
         canvas_layout = QtWidgets.QVBoxLayout(canvas_container)
         canvas_layout.setContentsMargins(6, 6, 6, 6)
 
@@ -802,16 +860,20 @@ class MainWindow(QtWidgets.QMainWindow):
         dpi_layout = QtWidgets.QHBoxLayout(dpi_group)
         for i in range(len(prof.resolutions)):
             stage_box = QtWidgets.QVBoxLayout()
-            stage_lbl = QtWidgets.QLabel(f"Stage {i+1}:")
+            stage_lbl = QtWidgets.QLabel(f"Stage {i + 1}:")
             spin_dpi = QtWidgets.QSpinBox()
             spin_dpi.setRange(100, 25600)
             spin_dpi.setSingleStep(50)
             spin_dpi.setValue(prof.resolutions[i])
-            spin_dpi.valueChanged.connect(lambda val, p=prof, idx=i: self._on_dpi_changed(p, idx, val))
+            spin_dpi.valueChanged.connect(
+                lambda val, p=prof, idx=i: self._on_dpi_changed(p, idx, val)
+            )
 
             radio_default = QtWidgets.QRadioButton("Default")
             radio_default.setChecked(prof.resolution_default_index == i)
-            radio_default.toggled.connect(lambda val, p=prof, idx=i: self._on_default_dpi_toggled(p, idx, val))
+            radio_default.toggled.connect(
+                lambda val, p=prof, idx=i: self._on_default_dpi_toggled(p, idx, val)
+            )
 
             stage_box.addWidget(stage_lbl)
             stage_box.addWidget(spin_dpi)
@@ -823,11 +885,19 @@ class MainWindow(QtWidgets.QMainWindow):
         table = QtWidgets.QTableWidget()
         table.setColumnCount(3)
         table.setHorizontalHeaderLabels(["Physical Button", "Mapped Action", "Action"])
-        table.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
-        table.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.Stretch)
-        table.horizontalHeader().setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
+        table.horizontalHeader().setSectionResizeMode(
+            0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents
+        )
+        table.horizontalHeader().setSectionResizeMode(
+            1, QtWidgets.QHeaderView.ResizeMode.Stretch
+        )
+        table.horizontalHeader().setSectionResizeMode(
+            2, QtWidgets.QHeaderView.ResizeMode.ResizeToContents
+        )
         table.verticalHeader().setVisible(False)
-        table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
+        table.setSelectionBehavior(
+            QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows
+        )
 
         self._populate_button_table(table, prof)
         right_layout.addWidget(table, stretch=1)
@@ -873,7 +943,9 @@ class MainWindow(QtWidgets.QMainWindow):
     def _update_mouse_canvas_actions(self, tab: QtWidgets.QWidget, prof: Profile):
         if hasattr(tab, "mouse_canvas"):
             buttons = prof.gbuttons if self.current_gshift_mode else prof.buttons
-            actions_map = {row + 1: action.display_name() for row, action in enumerate(buttons)}
+            actions_map = {
+                row + 1: action.display_name() for row, action in enumerate(buttons)
+            }
             tab.mouse_canvas.set_button_actions(actions_map)
 
     def _populate_button_table(self, table: QtWidgets.QTableWidget, prof: Profile):
@@ -888,16 +960,22 @@ class MainWindow(QtWidgets.QMainWindow):
             label = labels.get(b_num, f"Button {b_num}")
 
             item_label = QtWidgets.QTableWidgetItem(label)
-            item_label.setFlags(QtCore.Qt.ItemFlag.ItemIsEnabled | QtCore.Qt.ItemFlag.ItemIsSelectable)
+            item_label.setFlags(
+                QtCore.Qt.ItemFlag.ItemIsEnabled | QtCore.Qt.ItemFlag.ItemIsSelectable
+            )
             table.setItem(row, 0, item_label)
 
             item_action = QtWidgets.QTableWidgetItem(action.display_name())
-            item_action.setFlags(QtCore.Qt.ItemFlag.ItemIsEnabled | QtCore.Qt.ItemFlag.ItemIsSelectable)
+            item_action.setFlags(
+                QtCore.Qt.ItemFlag.ItemIsEnabled | QtCore.Qt.ItemFlag.ItemIsSelectable
+            )
             table.setItem(row, 1, item_action)
 
             btn_edit = QtWidgets.QPushButton("Edit")
             btn_edit.setObjectName("secondaryBtn")
-            btn_edit.clicked.connect(lambda _, r=row, p=prof, tbl=table: self.on_edit_button(p, r, tbl))
+            btn_edit.clicked.connect(
+                lambda _, r=row, p=prof, tbl=table: self.on_edit_button(p, r, tbl)
+            )
             table.setCellWidget(row, 2, btn_edit)
 
         tab = getattr(table, "tab_owner", None)
@@ -910,10 +988,14 @@ class MainWindow(QtWidgets.QMainWindow):
             self._populate_button_table(tab.table_widget, prof)
         self._update_mouse_canvas_actions(tab, prof)
 
-    def on_edit_button(self, prof: Profile, button_index: int, table: QtWidgets.QTableWidget):
+    def on_edit_button(
+        self, prof: Profile, button_index: int, table: QtWidgets.QTableWidget
+    ):
         b_num = button_index + 1
         device_name = self.config.device_name if self.config else "G502"
-        labels = get_button_labels(device_name, len(prof.buttons), self.current_model_key)
+        labels = get_button_labels(
+            device_name, len(prof.buttons), self.current_model_key
+        )
         b_label = labels.get(b_num, f"Button {b_num}")
         buttons_list = prof.gbuttons if self.current_gshift_mode else prof.buttons
         current_action = buttons_list[button_index]
@@ -952,7 +1034,9 @@ class MainWindow(QtWidgets.QMainWindow):
         # Dynamically refresh Active Staged Game badge on Profile 5 tab whenever viewed
         if 0 <= idx < self.tab_widget.count():
             tab = self.tab_widget.widget(idx)
-            if getattr(tab, "profile_id", None) == 5 and hasattr(tab, "lbl_staged_game"):
+            if getattr(tab, "profile_id", None) == 5 and hasattr(
+                tab, "lbl_staged_game"
+            ):
                 staged_name = ""
                 if hasattr(self, "games_tab") and self.games_tab:
                     staged_name = self.games_tab.mgr.get_settings().staged_slot5_profile
@@ -960,7 +1044,9 @@ class MainWindow(QtWidgets.QMainWindow):
                     clean_name = staged_name.replace(".json", "")
                     tab.lbl_staged_game.setText(f"Active Staged Game: {clean_name}")
                 else:
-                    tab.lbl_staged_game.setText("Active Staged Game: None (Default Slot 5)")
+                    tab.lbl_staged_game.setText(
+                        "Active Staged Game: None (Default Slot 5)"
+                    )
 
     def on_set_active_profile(self):
         tab_idx = self.tab_widget.currentIndex()
@@ -969,16 +1055,22 @@ class MainWindow(QtWidgets.QMainWindow):
         pids = sorted(self.config.profiles.keys())
         target_pid = pids[tab_idx]
 
-        self.device_status.setText(f"Switching active profile to Profile {target_pid}...")
+        self.device_status.setText(
+            f"Switching active profile to Profile {target_pid}..."
+        )
         success, msg = self.backend.set_active_profile(target_pid)
         if success:
             self.config.active_profile_id = target_pid
-            self.lbl_active_info.setText(f"Active Profile on Mouse: Profile {target_pid}")
+            self.lbl_active_info.setText(
+                f"Active Profile on Mouse: Profile {target_pid}"
+            )
             self.device_status.setText(msg)
             self._update_tray_profile_checked(target_pid)
             self._rebuild_tabs()
         else:
-            QtWidgets.QMessageBox.warning(self, "Error", f"Failed to switch active profile:\n{msg}")
+            QtWidgets.QMessageBox.warning(
+                self, "Error", f"Failed to switch active profile:\n{msg}"
+            )
 
     def on_apply_to_mouse(self):
         if not self.config:
@@ -988,9 +1080,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_apply.setText("Flashing...")
         self.btn_read.setEnabled(False)
         self.device_status.setText("Flashing configuration to mouse onboard memory...")
-        self.device_status.setStyleSheet("color: #38bdf8; font-weight: bold; padding: 2px 8px; background: #0c4a6e; border-radius: 4px;")
+        self.device_status.setStyleSheet(
+            "color: #38bdf8; font-weight: bold; padding: 2px 8px; background: #0c4a6e; border-radius: 4px;"
+        )
 
-        auto_off = self.chk_auto_turn_off_rgb.isChecked() if hasattr(self, "chk_auto_turn_off_rgb") else False
+        auto_off = (
+            self.chk_auto_turn_off_rgb.isChecked()
+            if hasattr(self, "chk_auto_turn_off_rgb")
+            else False
+        )
         self.worker = WorkerThread(self.backend.write_profiles, self.config, auto_off)
         self.worker.finished_signal.connect(self._on_write_finished)
         self.worker.start()
@@ -1019,12 +1117,23 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.games_tab.mgr.save_profile_to_library(staged, p5_dict)
 
             self.device_status.setText("Changes successfully applied to mouse memory.")
-            self.device_status.setStyleSheet("color: #4ade80; font-weight: bold; padding: 2px 8px; background: #14532d; border-radius: 4px;")
-            QtCore.QTimer.singleShot(4000, lambda: self.device_status.setStyleSheet("color: #a0a0a0; padding: 2px 8px;"))
+            self.device_status.setStyleSheet(
+                "color: #4ade80; font-weight: bold; padding: 2px 8px; background: #14532d; border-radius: 4px;"
+            )
+            QtCore.QTimer.singleShot(
+                4000,
+                lambda: self.device_status.setStyleSheet(
+                    "color: #a0a0a0; padding: 2px 8px;"
+                ),
+            )
         else:
             self.device_status.setText("Failed to burn to memory.")
-            self.device_status.setStyleSheet("color: #ef4444; font-weight: bold; padding: 2px 8px; background: #450a0a; border-radius: 4px;")
-            QtWidgets.QMessageBox.critical(self, "Write Failed", f"Could not write to mouse:\n\n{msg}")
+            self.device_status.setStyleSheet(
+                "color: #ef4444; font-weight: bold; padding: 2px 8px; background: #450a0a; border-radius: 4px;"
+            )
+            QtWidgets.QMessageBox.critical(
+                self, "Write Failed", f"Could not write to mouse:\n\n{msg}"
+            )
 
     def on_open_backups(self):
         prune_backups(50)

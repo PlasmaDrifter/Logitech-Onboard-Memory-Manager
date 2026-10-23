@@ -1,13 +1,12 @@
 """Data models for Logitech Onboard Profiles and Button Mappings."""
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Any
+from typing import Any
+
 from .keycodes import (
-    MOUSE_BUTTONS,
     FUNCTION_ACTIONS,
     HID_KEYCODES,
-    MODIFIERS,
-    G502_BUTTON_LABELS,
+    MOUSE_BUTTONS,
 )
 
 
@@ -18,10 +17,10 @@ class ButtonAction:
     value: int = 1  # button bitmask, HID keycode, or function ID
     modifiers: int = 0  # modifier bitmask for type 2
     data: int = 0  # optional data for function
-    sector: Optional[int] = None  # for macro
-    address: Optional[int] = None  # for macro
-    raw_bytes: Optional[bytes] = None
-    macro_text: Optional[str] = None
+    sector: int | None = None  # for macro
+    address: int | None = None  # for macro
+    raw_bytes: bytes | None = None
+    macro_text: str | None = None
 
     def display_name(self) -> str:
         """Returns a user-friendly label for the mapped button action."""
@@ -83,10 +82,10 @@ class ButtonAction:
             d["value"] = self.value
             d["data"] = self.data
         elif self.behavior == 0:
-            d["sector"] = self.sector
-            d["address"] = self.address
+            d["sector"] = self.sector if self.sector is not None else 6
+            d["address"] = self.address if self.address is not None else 0
         elif self.behavior == 15:
-            d["bytes"] = b"\xff\xff\xff\xff"
+            d["bytes"] = 0xFFFFFFFF
         return d
 
     def to_dict(self) -> dict:
@@ -115,7 +114,7 @@ class ButtonAction:
         )
 
 
-def create_default_buttons() -> List[ButtonAction]:
+def create_default_buttons() -> list[ButtonAction]:
     """Returns standard default button mappings for new profiles:
     - Button 1: Left Click
     - Button 2: Right Click
@@ -128,14 +127,14 @@ def create_default_buttons() -> List[ButtonAction]:
         ButtonAction.mouse_click(1),  # B1: Left Click
         ButtonAction.mouse_click(2),  # B2: Right Click
         ButtonAction.mouse_click(4),  # B3: Middle Click
-        ButtonAction.disabled(),      # B4: Blank
-        ButtonAction.disabled(),      # B5: Blank
-        ButtonAction.disabled(),      # B6: Blank
+        ButtonAction.disabled(),  # B4: Blank
+        ButtonAction.disabled(),  # B5: Blank
+        ButtonAction.disabled(),  # B6: Blank
         ButtonAction.function(0x4A),  # B7: Scroll Wheel Tilt Left
         ButtonAction.function(0x4B),  # B8: Scroll Wheel Tilt Right
-        ButtonAction.disabled(),      # B9: Blank
-        ButtonAction.disabled(),      # B10: Blank
-        ButtonAction.disabled(),      # B11: Blank
+        ButtonAction.disabled(),  # B9: Blank
+        ButtonAction.disabled(),  # B10: Blank
+        ButtonAction.disabled(),  # B11: Blank
     ]
 
 
@@ -146,11 +145,13 @@ class Profile:
     enabled: int
     name: str = "Default"
     report_rate: int = 1  # 1ms = 1000Hz, 2ms = 500Hz
-    resolutions: List[int] = field(default_factory=lambda: [800, 1200, 1600, 2400, 3200])
+    resolutions: list[int] = field(
+        default_factory=lambda: [800, 1200, 1600, 2400, 3200]
+    )
     resolution_default_index: int = 0
     resolution_shift_index: int = 0
-    buttons: List[ButtonAction] = field(default_factory=create_default_buttons)
-    gbuttons: List[ButtonAction] = field(default_factory=create_default_buttons)
+    buttons: list[ButtonAction] = field(default_factory=create_default_buttons)
+    gbuttons: list[ButtonAction] = field(default_factory=create_default_buttons)
     angle_snap: int = 0
     red: int = 255
     green: int = 255
@@ -160,7 +161,7 @@ class Profile:
     po_timeout: int = 300
     write_count: int = 65535
     reserved: bytes = b"\xff" * 8
-    lighting: List[Any] = field(default_factory=list)
+    lighting: list[Any] = field(default_factory=list)
 
 
 @dataclass
@@ -172,5 +173,5 @@ class OnboardConfig:
     sectors: int = 16
     size: int = 255
     version: int = 3
-    profiles: Dict[int, Profile] = field(default_factory=dict)
+    profiles: dict[int, Profile] = field(default_factory=dict)
     active_profile_id: int = 1

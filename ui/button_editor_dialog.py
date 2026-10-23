@@ -1,61 +1,102 @@
 """Interactive dialog for editing an individual mouse button mapping."""
 
 try:
-    from PySide6 import QtWidgets, QtCore, QtGui
+    from PySide6 import QtCore, QtGui, QtWidgets
 except ImportError:
-    from PyQt6 import QtWidgets, QtCore, QtGui
+    from PyQt6 import QtCore, QtGui, QtWidgets
 
-from core.models import ButtonAction
 from core.keycodes import (
-    MOUSE_BUTTONS,
-    MOUSE_BUTTON_NAMES_INV,
     FUNCTION_ACTIONS,
-    FUNCTION_NAMES_INV,
     HID_KEYCODES,
-    HID_KEYCODES_INV,
-    MODIFIER_LEFT_CTRL,
-    MODIFIER_LEFT_SHIFT,
     MODIFIER_LEFT_ALT,
+    MODIFIER_LEFT_CTRL,
     MODIFIER_LEFT_GUI,
+    MODIFIER_LEFT_SHIFT,
+    MOUSE_BUTTONS,
 )
-
+from core.models import ButtonAction
 
 # Qt Key to USB HID Keycode map
 QT_KEY_TO_HID = {
-    QtCore.Qt.Key.Key_A: 0x04, QtCore.Qt.Key.Key_B: 0x05, QtCore.Qt.Key.Key_C: 0x06,
-    QtCore.Qt.Key.Key_D: 0x07, QtCore.Qt.Key.Key_E: 0x08, QtCore.Qt.Key.Key_F: 0x09,
-    QtCore.Qt.Key.Key_G: 0x0A, QtCore.Qt.Key.Key_H: 0x0B, QtCore.Qt.Key.Key_I: 0x0C,
-    QtCore.Qt.Key.Key_J: 0x0D, QtCore.Qt.Key.Key_K: 0x0E, QtCore.Qt.Key.Key_L: 0x0F,
-    QtCore.Qt.Key.Key_M: 0x10, QtCore.Qt.Key.Key_N: 0x11, QtCore.Qt.Key.Key_O: 0x12,
-    QtCore.Qt.Key.Key_P: 0x13, QtCore.Qt.Key.Key_Q: 0x14, QtCore.Qt.Key.Key_R: 0x15,
-    QtCore.Qt.Key.Key_S: 0x16, QtCore.Qt.Key.Key_T: 0x17, QtCore.Qt.Key.Key_U: 0x18,
-    QtCore.Qt.Key.Key_V: 0x19, QtCore.Qt.Key.Key_W: 0x1A, QtCore.Qt.Key.Key_X: 0x1B,
-    QtCore.Qt.Key.Key_Y: 0x1C, QtCore.Qt.Key.Key_Z: 0x1D,
-    QtCore.Qt.Key.Key_1: 0x1E, QtCore.Qt.Key.Key_2: 0x1F, QtCore.Qt.Key.Key_3: 0x20,
-    QtCore.Qt.Key.Key_4: 0x21, QtCore.Qt.Key.Key_5: 0x22, QtCore.Qt.Key.Key_6: 0x23,
-    QtCore.Qt.Key.Key_7: 0x24, QtCore.Qt.Key.Key_8: 0x25, QtCore.Qt.Key.Key_9: 0x26,
+    QtCore.Qt.Key.Key_A: 0x04,
+    QtCore.Qt.Key.Key_B: 0x05,
+    QtCore.Qt.Key.Key_C: 0x06,
+    QtCore.Qt.Key.Key_D: 0x07,
+    QtCore.Qt.Key.Key_E: 0x08,
+    QtCore.Qt.Key.Key_F: 0x09,
+    QtCore.Qt.Key.Key_G: 0x0A,
+    QtCore.Qt.Key.Key_H: 0x0B,
+    QtCore.Qt.Key.Key_I: 0x0C,
+    QtCore.Qt.Key.Key_J: 0x0D,
+    QtCore.Qt.Key.Key_K: 0x0E,
+    QtCore.Qt.Key.Key_L: 0x0F,
+    QtCore.Qt.Key.Key_M: 0x10,
+    QtCore.Qt.Key.Key_N: 0x11,
+    QtCore.Qt.Key.Key_O: 0x12,
+    QtCore.Qt.Key.Key_P: 0x13,
+    QtCore.Qt.Key.Key_Q: 0x14,
+    QtCore.Qt.Key.Key_R: 0x15,
+    QtCore.Qt.Key.Key_S: 0x16,
+    QtCore.Qt.Key.Key_T: 0x17,
+    QtCore.Qt.Key.Key_U: 0x18,
+    QtCore.Qt.Key.Key_V: 0x19,
+    QtCore.Qt.Key.Key_W: 0x1A,
+    QtCore.Qt.Key.Key_X: 0x1B,
+    QtCore.Qt.Key.Key_Y: 0x1C,
+    QtCore.Qt.Key.Key_Z: 0x1D,
+    QtCore.Qt.Key.Key_1: 0x1E,
+    QtCore.Qt.Key.Key_2: 0x1F,
+    QtCore.Qt.Key.Key_3: 0x20,
+    QtCore.Qt.Key.Key_4: 0x21,
+    QtCore.Qt.Key.Key_5: 0x22,
+    QtCore.Qt.Key.Key_6: 0x23,
+    QtCore.Qt.Key.Key_7: 0x24,
+    QtCore.Qt.Key.Key_8: 0x25,
+    QtCore.Qt.Key.Key_9: 0x26,
     QtCore.Qt.Key.Key_0: 0x27,
-    QtCore.Qt.Key.Key_Return: 0x28, QtCore.Qt.Key.Key_Enter: 0x28,
+    QtCore.Qt.Key.Key_Return: 0x28,
+    QtCore.Qt.Key.Key_Enter: 0x28,
     QtCore.Qt.Key.Key_Escape: 0x29,
     QtCore.Qt.Key.Key_Backspace: 0x2A,
     QtCore.Qt.Key.Key_Tab: 0x2B,
     QtCore.Qt.Key.Key_Space: 0x2C,
-    QtCore.Qt.Key.Key_Minus: 0x2D, QtCore.Qt.Key.Key_Equal: 0x2E,
-    QtCore.Qt.Key.Key_BracketLeft: 0x2F, QtCore.Qt.Key.Key_BracketRight: 0x30,
+    QtCore.Qt.Key.Key_Minus: 0x2D,
+    QtCore.Qt.Key.Key_Equal: 0x2E,
+    QtCore.Qt.Key.Key_BracketLeft: 0x2F,
+    QtCore.Qt.Key.Key_BracketRight: 0x30,
     QtCore.Qt.Key.Key_Backslash: 0x31,
-    QtCore.Qt.Key.Key_Semicolon: 0x33, QtCore.Qt.Key.Key_Apostrophe: 0x34,
-    QtCore.Qt.Key.Key_QuoteLeft: 0x35, QtCore.Qt.Key.Key_Comma: 0x36,
-    QtCore.Qt.Key.Key_Period: 0x37, QtCore.Qt.Key.Key_Slash: 0x38,
+    QtCore.Qt.Key.Key_Semicolon: 0x33,
+    QtCore.Qt.Key.Key_Apostrophe: 0x34,
+    QtCore.Qt.Key.Key_QuoteLeft: 0x35,
+    QtCore.Qt.Key.Key_Comma: 0x36,
+    QtCore.Qt.Key.Key_Period: 0x37,
+    QtCore.Qt.Key.Key_Slash: 0x38,
     QtCore.Qt.Key.Key_CapsLock: 0x39,
-    QtCore.Qt.Key.Key_F1: 0x3A, QtCore.Qt.Key.Key_F2: 0x3B, QtCore.Qt.Key.Key_F3: 0x3C,
-    QtCore.Qt.Key.Key_F4: 0x3D, QtCore.Qt.Key.Key_F5: 0x3E, QtCore.Qt.Key.Key_F6: 0x3F,
-    QtCore.Qt.Key.Key_F7: 0x40, QtCore.Qt.Key.Key_F8: 0x41, QtCore.Qt.Key.Key_F9: 0x42,
-    QtCore.Qt.Key.Key_F10: 0x43, QtCore.Qt.Key.Key_F11: 0x44, QtCore.Qt.Key.Key_F12: 0x45,
-    QtCore.Qt.Key.Key_Print: 0x46, QtCore.Qt.Key.Key_ScrollLock: 0x47, QtCore.Qt.Key.Key_Pause: 0x48,
-    QtCore.Qt.Key.Key_Insert: 0x49, QtCore.Qt.Key.Key_Home: 0x4A, QtCore.Qt.Key.Key_PageUp: 0x4B,
-    QtCore.Qt.Key.Key_Delete: 0x4C, QtCore.Qt.Key.Key_End: 0x4D, QtCore.Qt.Key.Key_PageDown: 0x4E,
-    QtCore.Qt.Key.Key_Right: 0x4F, QtCore.Qt.Key.Key_Left: 0x50,
-    QtCore.Qt.Key.Key_Down: 0x51, QtCore.Qt.Key.Key_Up: 0x52,
+    QtCore.Qt.Key.Key_F1: 0x3A,
+    QtCore.Qt.Key.Key_F2: 0x3B,
+    QtCore.Qt.Key.Key_F3: 0x3C,
+    QtCore.Qt.Key.Key_F4: 0x3D,
+    QtCore.Qt.Key.Key_F5: 0x3E,
+    QtCore.Qt.Key.Key_F6: 0x3F,
+    QtCore.Qt.Key.Key_F7: 0x40,
+    QtCore.Qt.Key.Key_F8: 0x41,
+    QtCore.Qt.Key.Key_F9: 0x42,
+    QtCore.Qt.Key.Key_F10: 0x43,
+    QtCore.Qt.Key.Key_F11: 0x44,
+    QtCore.Qt.Key.Key_F12: 0x45,
+    QtCore.Qt.Key.Key_Print: 0x46,
+    QtCore.Qt.Key.Key_ScrollLock: 0x47,
+    QtCore.Qt.Key.Key_Pause: 0x48,
+    QtCore.Qt.Key.Key_Insert: 0x49,
+    QtCore.Qt.Key.Key_Home: 0x4A,
+    QtCore.Qt.Key.Key_PageUp: 0x4B,
+    QtCore.Qt.Key.Key_Delete: 0x4C,
+    QtCore.Qt.Key.Key_End: 0x4D,
+    QtCore.Qt.Key.Key_PageDown: 0x4E,
+    QtCore.Qt.Key.Key_Right: 0x4F,
+    QtCore.Qt.Key.Key_Left: 0x50,
+    QtCore.Qt.Key.Key_Down: 0x51,
+    QtCore.Qt.Key.Key_Up: 0x52,
     QtCore.Qt.Key.Key_Shift: 0xE1,
     QtCore.Qt.Key.Key_Control: 0xE0,
     QtCore.Qt.Key.Key_Alt: 0xE2,
@@ -65,6 +106,7 @@ QT_KEY_TO_HID = {
 
 class KeyRecorderWidget(QtWidgets.QLineEdit):
     """Line edit that captures keyboard shortcuts upon keypress."""
+
     shortcut_captured = QtCore.Signal(int, int)  # keycode, modifiers
 
     def __init__(self, parent=None):
@@ -78,7 +120,12 @@ class KeyRecorderWidget(QtWidgets.QLineEdit):
         key = event.key()
 
         # Handle standalone modifier presses
-        if key in (QtCore.Qt.Key.Key_Control, QtCore.Qt.Key.Key_Shift, QtCore.Qt.Key.Key_Alt, QtCore.Qt.Key.Key_Meta):
+        if key in (
+            QtCore.Qt.Key.Key_Control,
+            QtCore.Qt.Key.Key_Shift,
+            QtCore.Qt.Key.Key_Alt,
+            QtCore.Qt.Key.Key_Meta,
+        ):
             hid_code = QT_KEY_TO_HID.get(key, 0)
             if hid_code:
                 self.current_keycode = hid_code
@@ -125,7 +172,13 @@ class KeyRecorderWidget(QtWidgets.QLineEdit):
 
 
 class ButtonEditorDialog(QtWidgets.QDialog):
-    def __init__(self, button_num: int, button_label: str, current_action: ButtonAction, parent=None):
+    def __init__(
+        self,
+        button_num: int,
+        button_label: str,
+        current_action: ButtonAction,
+        parent=None,
+    ):
         super().__init__(parent)
         self.button_num = button_num
         self.button_label = button_label
@@ -216,7 +269,9 @@ class ButtonEditorDialog(QtWidgets.QDialog):
         # Tab 3: Disabled
         tab_disabled = QtWidgets.QWidget()
         td_layout = QtWidgets.QVBoxLayout(tab_disabled)
-        td_layout.addWidget(QtWidgets.QLabel("Disables this button so it performs no action."))
+        td_layout.addWidget(
+            QtWidgets.QLabel("Disables this button so it performs no action.")
+        )
         td_layout.addStretch()
         self.tab_widget.addTab(tab_disabled, "Disabled")
 
@@ -231,7 +286,8 @@ class ButtonEditorDialog(QtWidgets.QDialog):
 
         # Bottom buttons
         btn_box = QtWidgets.QDialogButtonBox(
-            QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel
+            QtWidgets.QDialogButtonBox.StandardButton.Ok
+            | QtWidgets.QDialogButtonBox.StandardButton.Cancel
         )
         btn_box.accepted.connect(self._on_accept)
         btn_box.rejected.connect(self.reject)
@@ -284,7 +340,6 @@ class ButtonEditorDialog(QtWidgets.QDialog):
         if self.chk_super.isChecked():
             mods |= MODIFIER_LEFT_GUI
 
-        keycode = self.combo_key.currentData()
         parts = []
         if mods & MODIFIER_LEFT_CTRL:
             parts.append("Ctrl")

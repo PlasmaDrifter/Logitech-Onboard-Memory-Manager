@@ -1,11 +1,11 @@
 from __future__ import annotations
+
+import json
 import os
 import re
 import sqlite3
-import json
-from pathlib import Path
 from dataclasses import dataclass
-from typing import List, Dict, Optional, Tuple
+from pathlib import Path
 
 
 @dataclass
@@ -16,7 +16,7 @@ class ScannedApp:
     executable: str
     window_class_hint: str
     item_type: str = "game"  # 'game' or 'app'
-    category: str = "Game"   # 'Game', 'Web Browser', 'Development', 'Audio/Video', 'Graphics', 'Office', 'Utility', 'System', 'Application'
+    category: str = "Game"  # 'Game', 'Web Browser', 'Development', 'Audio/Video', 'Graphics', 'Office', 'Utility', 'System', 'Application'
 
 
 # Backward compatibility alias
@@ -27,10 +27,10 @@ class GameScanner:
     """Scans local system for games and desktop applications across FreeDesktop, GNOME, and KDE Plasma."""
 
     @staticmethod
-    def get_scanned_items() -> Tuple[List[ScannedApp], List[ScannedApp]]:
+    def get_scanned_items() -> tuple[list[ScannedApp], list[ScannedApp]]:
         """Returns (games, applications) discovered on the local system."""
-        games: List[ScannedApp] = []
-        apps: List[ScannedApp] = []
+        games: list[ScannedApp] = []
+        apps: list[ScannedApp] = []
 
         seen_game_titles = set()
         seen_game_hints = set()
@@ -75,23 +75,23 @@ class GameScanner:
         return games, apps
 
     @staticmethod
-    def get_all_games() -> List[ScannedApp]:
+    def get_all_games() -> list[ScannedApp]:
         games, _ = GameScanner.get_scanned_items()
         return games
 
     @staticmethod
-    def get_all_apps() -> List[ScannedApp]:
+    def get_all_apps() -> list[ScannedApp]:
         _, apps = GameScanner.get_scanned_items()
         return apps
 
     @staticmethod
-    def scan_desktop_apps() -> Tuple[List[ScannedApp], List[ScannedApp]]:
+    def scan_desktop_apps() -> tuple[list[ScannedApp], list[ScannedApp]]:
         """Scans standard FreeDesktop .desktop directories for applications and games."""
-        games: List[ScannedApp] = []
-        apps: List[ScannedApp] = []
+        games: list[ScannedApp] = []
+        apps: list[ScannedApp] = []
 
         home = Path.home()
-        desktop_dirs: List[Path] = [
+        desktop_dirs: list[Path] = [
             home / ".local/share/applications",
             Path("/usr/local/share/applications"),
             Path("/usr/share/applications"),
@@ -143,7 +143,19 @@ class GameScanner:
                         if exec_val:
                             bin_part = re.split(r"\s+", exec_val)[0].strip("'\"")
                             bin_name = Path(bin_part).name
-                            if bin_name and not bin_name.endswith((".sh", ".py")) and bin_name not in ["python", "python3", "bash", "sh", "flatpak", "bwrap"]:
+                            if (
+                                bin_name
+                                and not bin_name.endswith((".sh", ".py"))
+                                and bin_name
+                                not in [
+                                    "python",
+                                    "python3",
+                                    "bash",
+                                    "sh",
+                                    "flatpak",
+                                    "bwrap",
+                                ]
+                            ):
                                 wmclass = bin_name
                         if not wmclass:
                             wmclass = desktop_file.stem
@@ -172,7 +184,11 @@ class GameScanner:
                             source = "System"
                     else:
                         # Desktop Applications: Repo, Flatpak, AppImage, User, Snap
-                        if "x-appimage" in txt_low or ".appimage" in txt_low or "/applications/" in exec_low:
+                        if (
+                            "x-appimage" in txt_low
+                            or ".appimage" in txt_low
+                            or "/applications/" in exec_low
+                        ):
                             source = "AppImage"
                         elif "flatpak" in f_str or "flatpak run" in exec_low:
                             source = "Flatpak"
@@ -204,7 +220,7 @@ class GameScanner:
         return games, apps
 
     @staticmethod
-    def _parse_desktop_entry(text: str) -> Dict[str, str]:
+    def _parse_desktop_entry(text: str) -> dict[str, str]:
         """Parses a FreeDesktop .desktop file text into key-value pairs for the [Desktop Entry] section."""
         data = {}
         in_entry = False
@@ -232,13 +248,36 @@ class GameScanner:
             return "Web Browser"
         elif any(k in c for k in ["development", "ide", "texteditor", "programming"]):
             return "Development"
-        elif any(k in c for k in ["audiovideo", "audio", "video", "player", "recorder", "music"]):
+        elif any(
+            k in c
+            for k in ["audiovideo", "audio", "video", "player", "recorder", "music"]
+        ):
             return "Audio / Video"
-        elif any(k in c for k in ["graphics", "photography", "2dgraphics", "vectorgraphics", "rastergraphics"]):
+        elif any(
+            k in c
+            for k in [
+                "graphics",
+                "photography",
+                "2dgraphics",
+                "vectorgraphics",
+                "rastergraphics",
+            ]
+        ):
             return "Graphics"
-        elif any(k in c for k in ["office", "wordprocessor", "spreadsheet", "presentation", "document"]):
+        elif any(
+            k in c
+            for k in [
+                "office",
+                "wordprocessor",
+                "spreadsheet",
+                "presentation",
+                "document",
+            ]
+        ):
             return "Office"
-        elif any(k in c for k in ["terminalemulator", "system", "settings", "hardware"]):
+        elif any(
+            k in c for k in ["terminalemulator", "system", "settings", "hardware"]
+        ):
             return "System"
         elif any(k in c for k in ["utility", "accessories", "filemanager"]):
             return "Utility"
@@ -247,13 +286,14 @@ class GameScanner:
         return "Application"
 
     @staticmethod
-    def scan_steam() -> List[ScannedGame]:
-        games: List[ScannedGame] = []
+    def scan_steam() -> list[ScannedGame]:
+        games: list[ScannedGame] = []
         home = Path.home()
         steam_vdfs = [
             home / ".local/share/Steam/steamapps/libraryfolders.vdf",
             home / ".steam/steam/steamapps/libraryfolders.vdf",
-            home / ".var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/libraryfolders.vdf",
+            home
+            / ".var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/libraryfolders.vdf",
         ]
 
         seen_appids = set()
@@ -270,7 +310,10 @@ class GameScanner:
                     pass
 
         # Also add default paths
-        for r in [home / ".local/share/Steam/steamapps", home / ".steam/steam/steamapps"]:
+        for r in [
+            home / ".local/share/Steam/steamapps",
+            home / ".steam/steam/steamapps",
+        ]:
             if r.is_dir():
                 library_paths.add(r)
 
@@ -286,26 +329,37 @@ class GameScanner:
                         title = name_m.group(1).strip()
                         appid = appid_m.group(1).strip()
                         # Ignore runtimes, proton, redistributables
-                        if any(x in title.lower() for x in ["proton", "steam linux runtime", "steamworks common", "anti-cheat", "battleye"]):
+                        if any(
+                            x in title.lower()
+                            for x in [
+                                "proton",
+                                "steam linux runtime",
+                                "steamworks common",
+                                "anti-cheat",
+                                "battleye",
+                            ]
+                        ):
                             continue
                         if appid in seen_appids:
                             continue
                         seen_appids.add(appid)
-                        games.append(ScannedGame(
-                            title=title,
-                            launcher="Steam",
-                            app_id=appid,
-                            executable="",
-                            window_class_hint=f"steam_app_{appid}"
-                        ))
+                        games.append(
+                            ScannedGame(
+                                title=title,
+                                launcher="Steam",
+                                app_id=appid,
+                                executable="",
+                                window_class_hint=f"steam_app_{appid}",
+                            )
+                        )
                 except Exception:
                     pass
 
         return sorted(games, key=lambda g: g.title.lower())
 
     @staticmethod
-    def scan_lutris() -> List[ScannedGame]:
-        games: List[ScannedGame] = []
+    def scan_lutris() -> list[ScannedGame]:
+        games: list[ScannedGame] = []
         home = Path.home()
         pga_paths = [
             home / ".local/share/lutris/pga.db",
@@ -317,18 +371,27 @@ class GameScanner:
                 try:
                     conn = sqlite3.connect(pga)
                     c = conn.cursor()
-                    c.execute("SELECT name, slug, runner, executable FROM games WHERE installed = 1")
+                    c.execute(
+                        "SELECT name, slug, runner, executable FROM games WHERE installed = 1"
+                    )
                     for name, slug, runner, exe in c.fetchall():
                         # Exclude store launchers
-                        if name in ["Epic Games Store", "Rockstar Games Launcher", "Ubisoft Connect", "EA App"]:
+                        if name in [
+                            "Epic Games Store",
+                            "Rockstar Games Launcher",
+                            "Ubisoft Connect",
+                            "EA App",
+                        ]:
                             continue
-                        games.append(ScannedGame(
-                            title=name,
-                            launcher="Lutris",
-                            app_id=slug or "",
-                            executable=exe or "",
-                            window_class_hint=slug or ""
-                        ))
+                        games.append(
+                            ScannedGame(
+                                title=name,
+                                launcher="Lutris",
+                                app_id=slug or "",
+                                executable=exe or "",
+                                window_class_hint=slug or "",
+                            )
+                        )
                     conn.close()
                 except Exception:
                     pass
@@ -336,8 +399,8 @@ class GameScanner:
         return sorted(games, key=lambda g: g.title.lower())
 
     @staticmethod
-    def scan_heroic() -> List[ScannedGame]:
-        games: List[ScannedGame] = []
+    def scan_heroic() -> list[ScannedGame]:
+        games: list[ScannedGame] = []
         home = Path.home()
         heroic_dirs = [
             home / ".config/heroic",
@@ -352,20 +415,26 @@ class GameScanner:
             legendary = hdir / "store_cache/legendary_library.json"
             if legendary.is_file():
                 try:
-                    data = json.loads(legendary.read_text(encoding="utf-8", errors="ignore"))
+                    data = json.loads(
+                        legendary.read_text(encoding="utf-8", errors="ignore")
+                    )
                     items = data if isinstance(data, list) else data.get("library", [])
                     for item in items:
-                        if not item.get("install", {}).get("is_dlc", False) and not item.get("is_dlc", False):
+                        if not item.get("install", {}).get(
+                            "is_dlc", False
+                        ) and not item.get("is_dlc", False):
                             title = item.get("title")
                             app_name = item.get("app_name")
                             if title and app_name:
-                                games.append(ScannedGame(
-                                    title=title,
-                                    launcher="Heroic (Epic)",
-                                    app_id=app_name,
-                                    executable=item.get("folder_name", ""),
-                                    window_class_hint=item.get("folder_name", "")
-                                ))
+                                games.append(
+                                    ScannedGame(
+                                        title=title,
+                                        launcher="Heroic (Epic)",
+                                        app_id=app_name,
+                                        executable=item.get("folder_name", ""),
+                                        window_class_hint=item.get("folder_name", ""),
+                                    )
+                                )
                 except Exception:
                     pass
 
@@ -379,13 +448,15 @@ class GameScanner:
                         title = item.get("title")
                         app_name = item.get("app_name") or str(item.get("id", ""))
                         if title:
-                            games.append(ScannedGame(
-                                title=title,
-                                launcher="Heroic (GOG)",
-                                app_id=app_name,
-                                executable="",
-                                window_class_hint=""
-                            ))
+                            games.append(
+                                ScannedGame(
+                                    title=title,
+                                    launcher="Heroic (GOG)",
+                                    app_id=app_name,
+                                    executable="",
+                                    window_class_hint="",
+                                )
+                            )
                 except Exception:
                     pass
 

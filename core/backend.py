@@ -1,34 +1,34 @@
 """Backend communication module for Logitech Onboard Memory."""
 
-import os
-import sys
-import yaml
-import shutil
 import datetime
+import shutil
 import subprocess
 from pathlib import Path
-from typing import Optional, Tuple, Dict, Any
+from typing import Any
 
-from .models import ButtonAction, Profile, OnboardConfig
+import yaml
+
 from .keycodes import HID_KEYCODES
+from .models import ButtonAction, OnboardConfig, Profile
 from .native_hidpp import NativeHIDPP
 
-KNOWN_MACROS = {}
+KNOWN_MACROS: dict[int, str] = {}
 
 # Standard factory raw hardware chunks for new profiles (Left, Right, Middle, Wheel Tilt active; others blank)
 FACTORY_RAW_CHUNKS = [
     bytes([0x80, 0x01, 0x00, 0x01]),  # Chunk 0: Left Click (B1)
     bytes([0x80, 0x01, 0x00, 0x02]),  # Chunk 1: Right Click (B2)
     bytes([0x80, 0x01, 0x00, 0x04]),  # Chunk 2: Middle Click (B3)
-    b"\xff\xff\xff\xff",              # Chunk 3: Blank (B4)
-    b"\xff\xff\xff\xff",              # Chunk 4: Blank (B6)
-    b"\xff\xff\xff\xff",              # Chunk 5: Blank (B5)
+    b"\xff\xff\xff\xff",  # Chunk 3: Blank (B4)
+    b"\xff\xff\xff\xff",  # Chunk 4: Blank (B6)
+    b"\xff\xff\xff\xff",  # Chunk 5: Blank (B5)
     bytes([0x90, 0x4A, 0xFF, 0x00]),  # Chunk 6: Scroll Wheel Tilt Left (B7)
     bytes([0x90, 0x4B, 0xFF, 0x00]),  # Chunk 7: Scroll Wheel Tilt Right (B8)
-    b"\xff\xff\xff\xff",              # Chunk 8: Blank (B9)
-    b"\xff\xff\xff\xff",              # Chunk 9: Blank (B10)
-    b"\xff\xff\xff\xff",              # Chunk 10: Blank (B11)
+    b"\xff\xff\xff\xff",  # Chunk 8: Blank (B9)
+    b"\xff\xff\xff\xff",  # Chunk 9: Blank (B10)
+    b"\xff\xff\xff\xff",  # Chunk 10: Blank (B11)
 ]
+
 
 def decode_logitech_macro(bytes_chunk: bytes) -> str:
     i = 0
@@ -36,10 +36,15 @@ def decode_logitech_macro(bytes_chunk: bytes) -> str:
     modifiers = []
 
     MOD_MAP = {
-        0x01E0: "Ctrl", 0x01E4: "Ctrl",
-        0x01E1: "Shift", 0x01E5: "Shift", 0x20E5: "Shift",
-        0x01E2: "Alt", 0x01E6: "Alt",
-        0x01E3: "Super", 0x01E7: "Super",
+        0x01E0: "Ctrl",
+        0x01E4: "Ctrl",
+        0x01E1: "Shift",
+        0x01E5: "Shift",
+        0x20E5: "Shift",
+        0x01E2: "Alt",
+        0x01E6: "Alt",
+        0x01E3: "Super",
+        0x01E7: "Super",
     }
 
     while i < len(bytes_chunk):
@@ -61,9 +66,7 @@ def decode_logitech_macro(bytes_chunk: bytes) -> str:
                 i += 3
             else:
                 break
-        elif b == 0x44:  # Key Up
-            i += 3
-        elif b == 0x40:  # Delay
+        elif b == 0x44 or b == 0x40:  # Key Up
             i += 3
         else:
             i += 1
@@ -98,15 +101,34 @@ class LEDEffectSettingYaml:
 
 
 def _setup_yaml():
-    yaml.SafeLoader.add_constructor("!Button", lambda l, n: ButtonYaml(**l.construct_mapping(n)))
-    yaml.SafeLoader.add_constructor("!OnboardProfile", lambda l, n: OnboardProfileYaml(**l.construct_mapping(n)))
-    yaml.SafeLoader.add_constructor("!OnboardProfiles", lambda l, n: OnboardProfilesYaml(**l.construct_mapping(n)))
-    yaml.SafeLoader.add_constructor("!LEDEffectSetting", lambda l, n: LEDEffectSettingYaml(**l.construct_mapping(n)))
+    yaml.SafeLoader.add_constructor(
+        "!Button", lambda l, n: ButtonYaml(**l.construct_mapping(n))
+    )
+    yaml.SafeLoader.add_constructor(
+        "!OnboardProfile", lambda l, n: OnboardProfileYaml(**l.construct_mapping(n))
+    )
+    yaml.SafeLoader.add_constructor(
+        "!OnboardProfiles", lambda l, n: OnboardProfilesYaml(**l.construct_mapping(n))
+    )
+    yaml.SafeLoader.add_constructor(
+        "!LEDEffectSetting", lambda l, n: LEDEffectSettingYaml(**l.construct_mapping(n))
+    )
 
-    yaml.Dumper.add_representer(ButtonYaml, lambda d, data: d.represent_mapping("!Button", data.__dict__))
-    yaml.Dumper.add_representer(OnboardProfileYaml, lambda d, data: d.represent_mapping("!OnboardProfile", data.__dict__))
-    yaml.Dumper.add_representer(OnboardProfilesYaml, lambda d, data: d.represent_mapping("!OnboardProfiles", data.__dict__))
-    yaml.Dumper.add_representer(LEDEffectSettingYaml, lambda d, data: d.represent_mapping("!LEDEffectSetting", data.__dict__))
+    yaml.Dumper.add_representer(
+        ButtonYaml, lambda d, data: d.represent_mapping("!Button", data.__dict__)
+    )
+    yaml.Dumper.add_representer(
+        OnboardProfileYaml,
+        lambda d, data: d.represent_mapping("!OnboardProfile", data.__dict__),
+    )
+    yaml.Dumper.add_representer(
+        OnboardProfilesYaml,
+        lambda d, data: d.represent_mapping("!OnboardProfiles", data.__dict__),
+    )
+    yaml.Dumper.add_representer(
+        LEDEffectSettingYaml,
+        lambda d, data: d.represent_mapping("!LEDEffectSetting", data.__dict__),
+    )
 
 
 _setup_yaml()
@@ -119,6 +141,7 @@ def get_config_dir() -> Path:
     if not new_dir.exists() and old_dir.exists():
         try:
             import shutil
+
             shutil.copytree(old_dir, new_dir)
         except Exception:
             return old_dir
@@ -139,8 +162,12 @@ def prune_backups(max_keep: int = 50) -> int:
         return 0
     try:
         yaml_files = sorted(
-            [f for f in backup_dir.iterdir() if f.is_file() and f.suffix.lower() in (".yaml", ".yml")],
-            key=lambda p: p.stat().st_mtime
+            [
+                f
+                for f in backup_dir.iterdir()
+                if f.is_file() and f.suffix.lower() in (".yaml", ".yml")
+            ],
+            key=lambda p: p.stat().st_mtime,
         )
         excess = len(yaml_files) - max_keep
         if excess <= 0:
@@ -160,11 +187,10 @@ def prune_backups(max_keep: int = 50) -> int:
 class MouseBackend:
     def __init__(self, device_name: str = "G502"):
         self.device_name = device_name
-        self.raw_yaml_cache: Optional[OnboardProfilesYaml] = None
+        self.raw_yaml_cache: OnboardProfilesYaml | None = None
 
-    def _save_backup(self, config: OnboardConfig) -> Optional[Path]:
+    def _save_backup(self, config: OnboardConfig) -> Path | None:
         """Saves a timestamped backup before writing changes."""
-        import datetime
         try:
             ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_file = get_backup_dir() / f"pre_write_{ts}.yaml"
@@ -184,9 +210,13 @@ class MouseBackend:
                     power_mode=getattr(prof, "power_mode", 255),
                     red=getattr(prof, "red", 255),
                     report_rate=getattr(prof, "report_rate", 1),
-                    resolution_default_index=getattr(prof, "resolution_default_index", 0),
+                    resolution_default_index=getattr(
+                        prof, "resolution_default_index", 0
+                    ),
                     resolution_shift_index=getattr(prof, "resolution_shift_index", 0),
-                    resolutions=list(getattr(prof, "resolutions", [800, 1200, 1600, 2400, 3200])),
+                    resolutions=list(
+                        getattr(prof, "resolutions", [800, 1200, 1600, 2400, 3200])
+                    ),
                     sector=getattr(prof, "sector", pid),
                 )
                 profiles_yaml[pid] = p_yaml
@@ -242,7 +272,13 @@ class MouseBackend:
         res = subprocess.run(["which", "flatpak"], capture_output=True, text=True)
         if res.returncode == 0:
             config_dir = get_config_dir()
-            return ["flatpak", "run", f"--filesystem={config_dir}", "--command=solaar", "io.github.pwr_solaar.solaar"]
+            return [
+                "flatpak",
+                "run",
+                f"--filesystem={config_dir}",
+                "--command=solaar",
+                "io.github.pwr_solaar.solaar",
+            ]
         return ["solaar"]
 
     def query_active_profile(self) -> int:
@@ -257,12 +293,17 @@ class MouseBackend:
             pass
         return 1
 
-    def enforce_lighting_state(self, drv: Optional[NativeHIDPP] = None, force_auto_off: Optional[bool] = None) -> bool:
+    def enforce_lighting_state(
+        self, drv: NativeHIDPP | None = None, force_auto_off: bool | None = None
+    ) -> bool:
         """Enforces the user's configured RGB lighting preference (e.g. keeping RGB off or applying active effect)."""
         import configparser
+
         conf_path = Path.home() / ".config" / "OMMLinux" / "OMMLinux.conf"
         if not conf_path.exists():
-            conf_path = Path.home() / ".config" / "LogitechLinux" / "OnboardMemoryManager.conf"
+            conf_path = (
+                Path.home() / ".config" / "LogitechLinux" / "OnboardMemoryManager.conf"
+            )
         auto_off = False
         effect_mode = "off"
         color_hex = "#00aeef"
@@ -274,11 +315,15 @@ class MouseBackend:
             cp = configparser.ConfigParser()
             try:
                 cp.read(str(conf_path))
-                section = "General" if "General" in cp else (cp.sections()[0] if cp.sections() else None)
+                section = (
+                    "General"
+                    if "General" in cp
+                    else (cp.sections()[0] if cp.sections() else None)
+                )
                 if section:
                     sec = cp[section]
                     if "auto_turn_off_rgb" in sec:
-                        auto_off = sec.getboolean("auto_turn_off_rgb")
+                        auto_off = bool(sec.getboolean("auto_turn_off_rgb"))
                     if "rgb_effect_mode" in sec:
                         effect_mode = sec.get("rgb_effect_mode", "off").lower()
                     if "rgb_color_hex" in sec:
@@ -315,18 +360,20 @@ class MouseBackend:
                     r, g, b = 0, 174, 239
                 return drv.set_rgb_effect(
                     effect_type=effect_mode,
-                    r=r, g=g, b=b,
+                    r=r,
+                    g=g,
+                    b=b,
                     brightness=brightness,
                     period_ms=speed_ms,
                     waveform=waveform,
-                    persistent=False
+                    persistent=False,
                 )
             return True
         finally:
             if needs_close:
                 drv.close()
 
-    def set_active_profile(self, profile_num: int) -> Tuple[bool, str]:
+    def set_active_profile(self, profile_num: int) -> tuple[bool, str]:
         """Switches the mouse's active onboard profile."""
         try:
             drv = NativeHIDPP()
@@ -341,7 +388,7 @@ class MouseBackend:
             return False, str(e)
         return False, "Failed to connect to mouse"
 
-    def turn_off_lighting(self) -> Tuple[bool, str]:
+    def turn_off_lighting(self) -> tuple[bool, str]:
         """Completely disables and shuts off all RGB LED zones on the mouse and saves config."""
         try:
             drv = NativeHIDPP()
@@ -362,19 +409,21 @@ class MouseBackend:
         brightness: int = 100,
         period_ms: int = 3000,
         waveform: int = 1,
-        persistent: bool = True
-    ) -> Tuple[bool, str]:
+        persistent: bool = True,
+    ) -> tuple[bool, str]:
         """Sets hardware RGB lighting effect directly on mouse EEPROM and RAM."""
         try:
             drv = NativeHIDPP()
             if drv.open():
                 ok = drv.set_rgb_effect(
                     effect_type=effect_type,
-                    r=r, g=g, b=b,
+                    r=r,
+                    g=g,
+                    b=b,
                     brightness=brightness,
                     period_ms=period_ms,
                     waveform=waveform,
-                    persistent=persistent
+                    persistent=persistent,
                 )
                 drv.close()
                 if ok:
@@ -384,7 +433,7 @@ class MouseBackend:
             return False, str(e)
         return False, "Could not access mouse"
 
-    def read_macros(self) -> Dict[int, str]:
+    def read_macros(self) -> dict[int, str]:
         """Reads and disassembles macros from mouse memory sector 6."""
         macro_dict = dict(KNOWN_MACROS)
         try:
@@ -401,13 +450,17 @@ class MouseBackend:
             pass
         return macro_dict
 
-    def read_profiles(self) -> Tuple[Optional[OnboardConfig], str]:
+    def read_profiles(self) -> tuple[OnboardConfig | None, str]:
         """Reads all profiles directly from the mouse onboard memory."""
         import struct
+
         try:
             drv = NativeHIDPP()
             if not drv.open():
-                return None, "Could not open Logitech mouse device on /dev/hidraw. Check permissions and USB connection."
+                return (
+                    None,
+                    "Could not open Logitech mouse device on /dev/hidraw. Check permissions and USB connection.",
+                )
 
             device_name = drv.get_device_name() or self.device_name
             active_id = drv.query_active_profile()
@@ -417,7 +470,11 @@ class MouseBackend:
             sec0 = drv.read_sector(0, 32)
             enabled_flags = {}
             for i in range(5):
-                chunk = sec0[i*4 : (i+1)*4] if len(sec0) >= (i+1)*4 else b"\x00"*4
+                chunk = (
+                    sec0[i * 4 : (i + 1) * 4]
+                    if len(sec0) >= (i + 1) * 4
+                    else b"\x00" * 4
+                )
                 pid = (chunk[0] << 8) | chunk[1] if chunk[0] != 0xFF else (i + 1)
                 enabled = chunk[2] if len(chunk) > 2 else 1
                 enabled_flags[pid if pid in range(1, 6) else (i + 1)] = enabled
@@ -443,15 +500,34 @@ class MouseBackend:
                     return ButtonAction(behavior=15, action_type=4, value=0)
                 beh = chunk[0]
                 if beh == 0x80:
-                    return ButtonAction(behavior=8, action_type=chunk[1], modifiers=chunk[2], value=chunk[3])
+                    return ButtonAction(
+                        behavior=8,
+                        action_type=chunk[1],
+                        modifiers=chunk[2],
+                        value=chunk[3],
+                    )
                 elif beh == 0x90:
-                    return ButtonAction(behavior=9, action_type=0, value=chunk[1], data=chunk[3])
+                    return ButtonAction(
+                        behavior=9, action_type=0, value=chunk[1], data=chunk[3]
+                    )
                 elif beh == 0x00:
                     sec = chunk[1]
                     addr = (chunk[2] << 8) | chunk[3]
                     mtxt = macros.get(addr)
-                    return ButtonAction(behavior=0, action_type=0, value=0, sector=sec, address=addr, macro_text=mtxt)
-                return ButtonAction(behavior=beh, action_type=chunk[1], modifiers=chunk[2], value=chunk[3])
+                    return ButtonAction(
+                        behavior=0,
+                        action_type=0,
+                        value=0,
+                        sector=sec,
+                        address=addr,
+                        macro_text=mtxt,
+                    )
+                return ButtonAction(
+                    behavior=beh,
+                    action_type=chunk[1],
+                    modifiers=chunk[2],
+                    value=chunk[3],
+                )
 
             for slot_num in range(1, 6):
                 raw = drv.read_sector(slot_num, 240)
@@ -461,17 +537,29 @@ class MouseBackend:
                 report_rate = raw[0]
                 def_dpi = raw[1]
                 shift_dpi = raw[2]
-                dpis = [struct.unpack("<H", raw[3+i*2 : 5+i*2])[0] for i in range(5)]
+                dpis = [
+                    struct.unpack("<H", raw[3 + i * 2 : 5 + i * 2])[0] for i in range(5)
+                ]
                 r, g, b = raw[13], raw[14], raw[15]
                 power_mode = raw[16]
                 angle_snap = raw[17]
 
-                raw_buttons = [decode_btn(raw[32+i*4 : 36+i*4], i) for i in range(11)]
-                raw_gbuttons = [decode_btn(raw[96+i*4 : 100+i*4], i) for i in range(11)]
+                raw_buttons = [
+                    decode_btn(raw[32 + i * 4 : 36 + i * 4], i) for i in range(11)
+                ]
+                raw_gbuttons = [
+                    decode_btn(raw[96 + i * 4 : 100 + i * 4], i) for i in range(11)
+                ]
                 buttons = self._translate_raw_to_ui_buttons(raw_buttons)
                 gbuttons = self._translate_raw_to_ui_buttons(raw_gbuttons)
 
-                raw_name = raw[160:208].decode("utf-16le", errors="ignore").rstrip("\x00").strip("\uffff").strip()
+                raw_name = (
+                    raw[160:208]
+                    .decode("utf-16le", errors="ignore")
+                    .rstrip("\x00")
+                    .strip("\uffff")
+                    .strip()
+                )
                 if not raw_name or raw_name == "PROFILE_NAME_DEFAULT":
                     prof_name = f"Profile {slot_num}"
                 else:
@@ -489,18 +577,22 @@ class MouseBackend:
                     buttons=buttons,
                     gbuttons=gbuttons,
                     angle_snap=angle_snap,
-                    red=r, green=g, blue=b,
+                    red=r,
+                    green=g,
+                    blue=b,
                     power_mode=power_mode,
-                    reserved=raw[20:28] if len(raw) >= 28 else b"\xff"*8
+                    reserved=raw[20:28] if len(raw) >= 28 else b"\xff" * 8,
                 )
                 config.profiles[slot_num] = prof
 
             drv.close()
             return config, "Success"
         except Exception as e:
-            return None, f"Failed to read profiles natively: {str(e)}"
+            return None, f"Failed to read profiles natively: {e!s}"
 
-    def _convert_from_yaml_obj(self, yaml_obj: Any, active_id: int, macro_map: Optional[Dict[int, str]] = None) -> OnboardConfig:
+    def _convert_from_yaml_obj(
+        self, yaml_obj: Any, active_id: int, macro_map: dict[int, str] | None = None
+    ) -> OnboardConfig:
         if macro_map is None:
             macro_map = KNOWN_MACROS
 
@@ -521,7 +613,9 @@ class MouseBackend:
             for b in getattr(p_raw, "buttons", []):
                 beh = getattr(b, "behavior", 8)
                 addr = getattr(b, "address", None)
-                macro_txt = macro_map.get(addr) if beh == 0 and addr is not None else None
+                macro_txt = (
+                    macro_map.get(addr) if beh == 0 and addr is not None else None
+                )
                 btn_actions.append(
                     ButtonAction(
                         behavior=beh,
@@ -540,7 +634,9 @@ class MouseBackend:
             for b in getattr(p_raw, "gbuttons", []):
                 beh = getattr(b, "behavior", 8)
                 addr = getattr(b, "address", None)
-                macro_txt = macro_map.get(addr) if beh == 0 and addr is not None else None
+                macro_txt = (
+                    macro_map.get(addr) if beh == 0 and addr is not None else None
+                )
                 gbtn_actions.append(
                     ButtonAction(
                         behavior=beh,
@@ -564,7 +660,9 @@ class MouseBackend:
                 enabled=getattr(p_raw, "enabled", 1),
                 name=getattr(p_raw, "name", f"Profile {pid}"),
                 report_rate=getattr(p_raw, "report_rate", 1),
-                resolutions=list(getattr(p_raw, "resolutions", [800, 1200, 1600, 2400, 3200])),
+                resolutions=list(
+                    getattr(p_raw, "resolutions", [800, 1200, 1600, 2400, 3200])
+                ),
                 resolution_default_index=getattr(p_raw, "resolution_default_index", 0),
                 resolution_shift_index=getattr(p_raw, "resolution_shift_index", 0),
                 buttons=btn_actions,
@@ -585,15 +683,18 @@ class MouseBackend:
         return config
 
     @staticmethod
-    def _build_profile_sector(prof: Profile, base_bytes: Optional[bytes] = None) -> bytes:
+    def _build_profile_sector(prof: Profile, base_bytes: bytes | None = None) -> bytes:
         import struct
-        b = bytearray(base_bytes if base_bytes and len(base_bytes) >= 240 else b"\x00" * 240)
+
+        b = bytearray(
+            base_bytes if base_bytes and len(base_bytes) >= 240 else b"\x00" * 240
+        )
         b[0] = prof.report_rate & 0xFF
         b[1] = prof.resolution_default_index & 0xFF
         b[2] = prof.resolution_shift_index & 0xFF
         for i in range(5):
             val = prof.resolutions[i] if i < len(prof.resolutions) else 0
-            b[3 + i*2 : 5 + i*2] = struct.pack("<H", val)
+            b[3 + i * 2 : 5 + i * 2] = struct.pack("<H", val)
         # Permanent hardware RGB shutoff
         b[13] = 0
         b[14] = 0
@@ -606,7 +707,14 @@ class MouseBackend:
             if i < len(raw_buttons):
                 btn = raw_buttons[i]
                 if btn.behavior == 8:
-                    chunk = bytes([0x80, btn.action_type & 0xFF, btn.modifiers & 0xFF, btn.value & 0xFF])
+                    chunk = bytes(
+                        [
+                            0x80,
+                            btn.action_type & 0xFF,
+                            btn.modifiers & 0xFF,
+                            btn.value & 0xFF,
+                        ]
+                    )
                 elif btn.behavior == 9:
                     chunk = bytes([0x90, btn.value & 0xFF, 0xFF, btn.data & 0xFF])
                 elif btn.behavior == 0:
@@ -616,17 +724,39 @@ class MouseBackend:
                 elif btn.behavior == 15 or btn.action_type == 4:
                     chunk = b"\xff\xff\xff\xff"
                 else:
-                    chunk = bytes([btn.behavior & 0xFF, btn.action_type & 0xFF, btn.modifiers & 0xFF, btn.value & 0xFF])
+                    chunk = bytes(
+                        [
+                            btn.behavior & 0xFF,
+                            btn.action_type & 0xFF,
+                            btn.modifiers & 0xFF,
+                            btn.value & 0xFF,
+                        ]
+                    )
             else:
-                chunk = FACTORY_RAW_CHUNKS[i] if i < len(FACTORY_RAW_CHUNKS) else b"\xff\xff\xff\xff"
+                chunk = (
+                    FACTORY_RAW_CHUNKS[i]
+                    if i < len(FACTORY_RAW_CHUNKS)
+                    else b"\xff\xff\xff\xff"
+                )
             if chunk == b"\x00\x00\x00\x00":
-                chunk = FACTORY_RAW_CHUNKS[i] if i < len(FACTORY_RAW_CHUNKS) else bytes([0x80, 0x01, 0x00, 0x01])
-            b[32 + i*4 : 36 + i*4] = chunk
+                chunk = (
+                    FACTORY_RAW_CHUNKS[i]
+                    if i < len(FACTORY_RAW_CHUNKS)
+                    else bytes([0x80, 0x01, 0x00, 0x01])
+                )
+            b[32 + i * 4 : 36 + i * 4] = chunk
         for i in range(11):
             if i < len(raw_gbuttons):
                 btn = raw_gbuttons[i]
                 if btn.behavior == 8:
-                    chunk = bytes([0x80, btn.action_type & 0xFF, btn.modifiers & 0xFF, btn.value & 0xFF])
+                    chunk = bytes(
+                        [
+                            0x80,
+                            btn.action_type & 0xFF,
+                            btn.modifiers & 0xFF,
+                            btn.value & 0xFF,
+                        ]
+                    )
                 elif btn.behavior == 9:
                     chunk = bytes([0x90, btn.value & 0xFF, 0xFF, btn.data & 0xFF])
                 elif btn.behavior == 0:
@@ -636,18 +766,35 @@ class MouseBackend:
                 elif btn.behavior == 15 or btn.action_type == 4:
                     chunk = b"\xff\xff\xff\xff"
                 else:
-                    chunk = bytes([btn.behavior & 0xFF, btn.action_type & 0xFF, btn.modifiers & 0xFF, btn.value & 0xFF])
+                    chunk = bytes(
+                        [
+                            btn.behavior & 0xFF,
+                            btn.action_type & 0xFF,
+                            btn.modifiers & 0xFF,
+                            btn.value & 0xFF,
+                        ]
+                    )
             else:
-                chunk = FACTORY_RAW_CHUNKS[i] if i < len(FACTORY_RAW_CHUNKS) else b"\xff\xff\xff\xff"
+                chunk = (
+                    FACTORY_RAW_CHUNKS[i]
+                    if i < len(FACTORY_RAW_CHUNKS)
+                    else b"\xff\xff\xff\xff"
+                )
             if chunk == b"\x00\x00\x00\x00":
-                chunk = FACTORY_RAW_CHUNKS[i] if i < len(FACTORY_RAW_CHUNKS) else bytes([0x80, 0x01, 0x00, 0x01])
-            b[96 + i*4 : 100 + i*4] = chunk
+                chunk = (
+                    FACTORY_RAW_CHUNKS[i]
+                    if i < len(FACTORY_RAW_CHUNKS)
+                    else bytes([0x80, 0x01, 0x00, 0x01])
+                )
+            b[96 + i * 4 : 100 + i * 4] = chunk
         raw_name = prof.name.encode("utf-16le")[:48].ljust(48, b"\x00")
         b[160:208] = raw_name
         b[208:240] = b"\x00" * 32
         return bytes(b[:240])
 
-    def write_profiles(self, config: OnboardConfig, auto_turn_off_rgb: bool = False) -> Tuple[bool, str]:
+    def write_profiles(
+        self, config: OnboardConfig, auto_turn_off_rgb: bool = False
+    ) -> tuple[bool, str]:
         """Saves a timestamped backup and burns the updated configuration to mouse flash memory."""
         try:
             self._save_backup(config)
@@ -683,11 +830,14 @@ class MouseBackend:
             drv.close()
             return True, "Successfully saved to mouse hardware memory!"
         except Exception as e:
-            return False, f"Write error: {str(e)}"
+            return False, f"Write error: {e!s}"
 
-    def flash_single_profile(self, slot_num: int, profile_data: dict) -> Tuple[bool, str]:
+    def flash_single_profile(
+        self, slot_num: int, profile_data: dict
+    ) -> tuple[bool, str]:
         """Flashes a single profile into the designated slot natively without Solaar."""
         import struct
+
         try:
             drv = NativeHIDPP()
             if not drv.open():
@@ -698,9 +848,12 @@ class MouseBackend:
 
             rate_ms = 1
             rr = profile_data.get("report_rate", 1000)
-            if rr == 500: rate_ms = 2
-            elif rr == 250: rate_ms = 4
-            elif rr == 125: rate_ms = 8
+            if rr == 500:
+                rate_ms = 2
+            elif rr == 250:
+                rate_ms = 4
+            elif rr == 125:
+                rate_ms = 8
             b[0] = rate_ms & 0xFF
             b[1] = profile_data.get("resolution_default_index", 0) & 0xFF
             b[2] = profile_data.get("resolution_shift_index", 0) & 0xFF
@@ -708,7 +861,7 @@ class MouseBackend:
             resolutions = profile_data.get("resolutions", [800, 1200, 1600, 2400, 3200])
             for i in range(5):
                 val = resolutions[i] if i < len(resolutions) else 0
-                b[3 + i*2 : 5 + i*2] = struct.pack("<H", val)
+                b[3 + i * 2 : 5 + i * 2] = struct.pack("<H", val)
 
             # RGB = 0
             b[13] = 0
@@ -743,20 +896,55 @@ class MouseBackend:
                     if beh == 15 or atype == 4:
                         chunk = b"\xff\xff\xff\xff"
                     elif beh == 8:
-                        chunk = bytes([0x80, atype & 0xFF, mods & 0xFF, val & 0xFF])
+                        chunk = bytes(
+                            [
+                                0x80,
+                                int(atype or 0) & 0xFF,
+                                int(mods or 0) & 0xFF,
+                                int(val or 0) & 0xFF,
+                            ]
+                        )
                     elif beh == 9:
-                        chunk = bytes([0x90, val & 0xFF, 0xFF, data & 0xFF])
+                        chunk = bytes(
+                            [0x90, int(val or 0) & 0xFF, 0xFF, int(data or 0) & 0xFF]
+                        )
                     elif beh == 0:
-                        chunk = bytes([0x00, sec & 0xFF, (addr >> 8) & 0xFF, addr & 0xFF])
+                        sec_int = int(sec or 6)
+                        addr_int = int(addr or 0)
+                        chunk = bytes(
+                            [
+                                0x00,
+                                sec_int & 0xFF,
+                                (addr_int >> 8) & 0xFF,
+                                addr_int & 0xFF,
+                            ]
+                        )
                     else:
-                        chunk = bytes([beh & 0xFF, atype & 0xFF, mods & 0xFF, val & 0xFF])
+                        chunk = bytes(
+                            [
+                                int(beh or 0) & 0xFF,
+                                int(atype or 0) & 0xFF,
+                                int(mods or 0) & 0xFF,
+                                int(val or 0) & 0xFF,
+                            ]
+                        )
                 else:
-                    chunk = FACTORY_RAW_CHUNKS[i] if i < len(FACTORY_RAW_CHUNKS) else b"\xff\xff\xff\xff"
+                    chunk = (
+                        FACTORY_RAW_CHUNKS[i]
+                        if i < len(FACTORY_RAW_CHUNKS)
+                        else b"\xff\xff\xff\xff"
+                    )
                 if chunk == b"\x00\x00\x00\x00":
-                    chunk = FACTORY_RAW_CHUNKS[i] if i < len(FACTORY_RAW_CHUNKS) else bytes([0x80, 0x01, 0x00, 0x01])
-                b[32 + i*4 : 36 + i*4] = chunk
+                    chunk = (
+                        FACTORY_RAW_CHUNKS[i]
+                        if i < len(FACTORY_RAW_CHUNKS)
+                        else bytes([0x80, 0x01, 0x00, 0x01])
+                    )
+                b[32 + i * 4 : 36 + i * 4] = chunk
 
-            gbuttons = self._translate_ui_to_raw_buttons(profile_data.get("gbuttons", []))
+            gbuttons = self._translate_ui_to_raw_buttons(
+                profile_data.get("gbuttons", [])
+            )
             for i in range(11):
                 if i < len(gbuttons):
                     b_item = gbuttons[i]
@@ -782,18 +970,51 @@ class MouseBackend:
                     if beh == 15 or atype == 4:
                         chunk = b"\xff\xff\xff\xff"
                     elif beh == 8:
-                        chunk = bytes([0x80, atype & 0xFF, mods & 0xFF, val & 0xFF])
+                        chunk = bytes(
+                            [
+                                0x80,
+                                int(atype or 0) & 0xFF,
+                                int(mods or 0) & 0xFF,
+                                int(val or 0) & 0xFF,
+                            ]
+                        )
                     elif beh == 9:
-                        chunk = bytes([0x90, val & 0xFF, 0xFF, data & 0xFF])
+                        chunk = bytes(
+                            [0x90, int(val or 0) & 0xFF, 0xFF, int(data or 0) & 0xFF]
+                        )
                     elif beh == 0:
-                        chunk = bytes([0x00, sec & 0xFF, (addr >> 8) & 0xFF, addr & 0xFF])
+                        sec_int = int(sec or 6)
+                        addr_int = int(addr or 0)
+                        chunk = bytes(
+                            [
+                                0x00,
+                                sec_int & 0xFF,
+                                (addr_int >> 8) & 0xFF,
+                                addr_int & 0xFF,
+                            ]
+                        )
                     else:
-                        chunk = bytes([beh & 0xFF, atype & 0xFF, mods & 0xFF, val & 0xFF])
+                        chunk = bytes(
+                            [
+                                int(beh or 0) & 0xFF,
+                                int(atype or 0) & 0xFF,
+                                int(mods or 0) & 0xFF,
+                                int(val or 0) & 0xFF,
+                            ]
+                        )
                 else:
-                    chunk = FACTORY_RAW_CHUNKS[i] if i < len(FACTORY_RAW_CHUNKS) else b"\xff\xff\xff\xff"
+                    chunk = (
+                        FACTORY_RAW_CHUNKS[i]
+                        if i < len(FACTORY_RAW_CHUNKS)
+                        else b"\xff\xff\xff\xff"
+                    )
                 if chunk == b"\x00\x00\x00\x00":
-                    chunk = FACTORY_RAW_CHUNKS[i] if i < len(FACTORY_RAW_CHUNKS) else bytes([0x80, 0x01, 0x00, 0x01])
-                b[96 + i*4 : 100 + i*4] = chunk
+                    chunk = (
+                        FACTORY_RAW_CHUNKS[i]
+                        if i < len(FACTORY_RAW_CHUNKS)
+                        else bytes([0x80, 0x01, 0x00, 0x01])
+                    )
+                b[96 + i * 4 : 100 + i * 4] = chunk
 
             name = profile_data.get("name", f"Profile {slot_num}")
             raw_name = name.encode("utf-16le")[:48].ljust(48, b"\x00")
@@ -811,4 +1032,4 @@ class MouseBackend:
             drv.close()
             return False, f"Failed writing Profile to Slot {slot_num}"
         except Exception as e:
-            return False, f"Flash error: {str(e)}"
+            return False, f"Flash error: {e!s}"

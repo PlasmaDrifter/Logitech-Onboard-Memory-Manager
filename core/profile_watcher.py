@@ -1,44 +1,56 @@
 from __future__ import annotations
-import os
-import time
-import subprocess
+
 import logging
+import subprocess
 import threading
-from typing import Optional, Callable
+import time
+from collections.abc import Callable
 from pathlib import Path
-from .profile_library import ProfileLibraryManager, GameRule, WatcherSettings
+
 from .backend import MouseBackend, prune_backups
+from .profile_library import GameRule, ProfileLibraryManager, WatcherSettings
 
 logger = logging.getLogger(__name__)
+
 
 class ProfileWatcher:
     """Monitors the active window / processes and dynamically engages mouse profile slots."""
 
-    def __init__(self, backend: Optional[MouseBackend] = None, mgr: Optional[ProfileLibraryManager] = None):
+    def __init__(
+        self,
+        backend: MouseBackend | None = None,
+        mgr: ProfileLibraryManager | None = None,
+    ):
         self.mgr = mgr or ProfileLibraryManager()
         self.backend = backend or MouseBackend("G502")
         self.settings: WatcherSettings = self.mgr.get_settings()
         self.rules = self.mgr.get_rules()
 
         self._running = False
-        self._thread: Optional[threading.Thread] = None
-        self._last_active_slot: Optional[int] = None
-        self._current_matched_rule: Optional[GameRule] = None
+        self._thread: threading.Thread | None = None
+        self._last_active_slot: int | None = None
+        self._current_matched_rule: GameRule | None = None
         self._last_prune_time: float = 0.0
         self._prune_interval_sec: float = 3600.0  # Hourly scheduled pruning
 
         # Battery / charging state tracking
-        self._last_battery_status: Optional[str] = None
+        self._last_battery_status: str | None = None
         self._charging_enforce_countdown: int = 0
         self._last_charging_check: float = 0.0
 
         # Automatic file modification tracking
-        self._last_rules_mtime: float = self.mgr.rules_file.stat().st_mtime if self.mgr.rules_file.exists() else 0.0
-        self._last_settings_mtime: float = self.mgr.settings_file.stat().st_mtime if self.mgr.settings_file.exists() else 0.0
+        self._last_rules_mtime: float = (
+            self.mgr.rules_file.stat().st_mtime if self.mgr.rules_file.exists() else 0.0
+        )
+        self._last_settings_mtime: float = (
+            self.mgr.settings_file.stat().st_mtime
+            if self.mgr.settings_file.exists()
+            else 0.0
+        )
         self._staged_slot5_mtime: float = 0.0
 
         # Callbacks for GUI updates
-        self.on_profile_switched: Optional[Callable[[int, Optional[str]], None]] = None
+        self.on_profile_switched: Callable[[int, str | None], None] | None = None
 
     def start(self) -> None:
         if self._running:
@@ -64,13 +76,26 @@ class ProfileWatcher:
     def _check_config_mtime(self) -> None:
         """Automatically detects on-disk changes to rules and settings and reloads them."""
         try:
-            r_mtime = self.mgr.rules_file.stat().st_mtime if self.mgr.rules_file.exists() else 0.0
-            s_mtime = self.mgr.settings_file.stat().st_mtime if self.mgr.settings_file.exists() else 0.0
-            if r_mtime != self._last_rules_mtime or s_mtime != self._last_settings_mtime:
+            r_mtime = (
+                self.mgr.rules_file.stat().st_mtime
+                if self.mgr.rules_file.exists()
+                else 0.0
+            )
+            s_mtime = (
+                self.mgr.settings_file.stat().st_mtime
+                if self.mgr.settings_file.exists()
+                else 0.0
+            )
+            if (
+                r_mtime != self._last_rules_mtime
+                or s_mtime != self._last_settings_mtime
+            ):
                 self._last_rules_mtime = r_mtime
                 self._last_settings_mtime = s_mtime
                 self.reload()
-                logger.info(f"Auto-reloaded rules & settings from disk ({len(self.rules)} rules active)")
+                logger.info(
+                    f"Auto-reloaded rules & settings from disk ({len(self.rules)} rules active)"
+                )
         except Exception as e:
             logger.debug(f"Config mtime check error: {e}")
 
@@ -81,13 +106,17 @@ class ProfileWatcher:
         try:
             res_c = subprocess.run(
                 ["kdotool", "getactivewindow", "getwindowclassname"],
-                capture_output=True, text=True, timeout=0.25
+                capture_output=True,
+                text=True,
+                timeout=0.25,
             )
             if res_c.returncode == 0:
                 win_class = res_c.stdout.strip()
             res_n = subprocess.run(
                 ["kdotool", "getactivewindow", "getwindowname"],
-                capture_output=True, text=True, timeout=0.25
+                capture_output=True,
+                text=True,
+                timeout=0.25,
             )
             if res_n.returncode == 0:
                 win_title = res_n.stdout.strip()
@@ -99,13 +128,17 @@ class ProfileWatcher:
         try:
             res_c = subprocess.run(
                 ["xdotool", "getactivewindow", "getwindowclassname"],
-                capture_output=True, text=True, timeout=0.25
+                capture_output=True,
+                text=True,
+                timeout=0.25,
             )
             if res_c.returncode == 0:
                 win_class = res_c.stdout.strip()
             res_n = subprocess.run(
                 ["xdotool", "getactivewindow", "getwindowname"],
-                capture_output=True, text=True, timeout=0.25
+                capture_output=True,
+                text=True,
+                timeout=0.25,
             )
             if res_n.returncode == 0:
                 win_title = res_n.stdout.strip()
@@ -116,7 +149,9 @@ class ProfileWatcher:
 
         return "", ""
 
-    def _match_active_rule(self, win_class: str, win_title: str = "") -> Optional[GameRule]:
+    def _match_active_rule(
+        self, win_class: str, win_title: str = ""
+    ) -> GameRule | None:
         wc_lower = win_class.lower() if win_class else ""
         wt_lower = win_title.lower() if win_title else ""
         if not wc_lower and not wt_lower:
@@ -124,22 +159,59 @@ class ProfileWatcher:
 
         # Classify if window is a generic desktop app / browser / utility
         NON_GAME_EXACT = {
-            "steam", "steamwebhelper", "lutris", "heroic", "com.heroicgameslauncher.hgl",
-            "epicgameslauncher", "gog-galaxy", "itch",
-            "xwaylandvideobridge", "krunner", "plasmashell", "gnome-shell",
-            "logitech-onboard-gui", "omm-linux", "omm"
+            "steam",
+            "steamwebhelper",
+            "lutris",
+            "heroic",
+            "com.heroicgameslauncher.hgl",
+            "epicgameslauncher",
+            "gog-galaxy",
+            "itch",
+            "xwaylandvideobridge",
+            "krunner",
+            "plasmashell",
+            "gnome-shell",
+            "logitech-onboard-gui",
+            "omm-linux",
+            "omm",
         }
         NON_GAME_SUBSTRINGS = {
-            "chrome", "firefox", "chromium", "brave", "edge", "opera", "vivaldi", "zen",
-            "antigravity", "code", "cursor", "vscodium", "sublime",
-            "gedit", "kate", "kwrite", "konsole", "terminal", "alacritty",
-            "kitty", "foot", "wezterm", "ptyxis", "xterm",
-            "dolphin", "nautilus", "thunar", "nemo", "pcmanfm"
+            "chrome",
+            "firefox",
+            "chromium",
+            "brave",
+            "edge",
+            "opera",
+            "vivaldi",
+            "zen",
+            "antigravity",
+            "code",
+            "cursor",
+            "vscodium",
+            "sublime",
+            "gedit",
+            "kate",
+            "kwrite",
+            "konsole",
+            "terminal",
+            "alacritty",
+            "kitty",
+            "foot",
+            "wezterm",
+            "ptyxis",
+            "xterm",
+            "dolphin",
+            "nautilus",
+            "thunar",
+            "nemo",
+            "pcmanfm",
         }
         is_non_game_app = False
-        if not wc_lower.startswith("steam_app_"):
-            if wc_lower in NON_GAME_EXACT or any(sub in wc_lower for sub in NON_GAME_SUBSTRINGS):
-                is_non_game_app = True
+        if not wc_lower.startswith("steam_app_") and (
+            wc_lower in NON_GAME_EXACT
+            or any(sub in wc_lower for sub in NON_GAME_SUBSTRINGS)
+        ):
+            is_non_game_app = True
 
         for rule in self.rules:
             if not rule.enabled:
@@ -159,7 +231,7 @@ class ProfileWatcher:
         return None
 
     @staticmethod
-    def _get_battery_status() -> Optional[str]:
+    def _get_battery_status() -> str | None:
         """Reads kernel power supply status for connected Logitech mouse."""
         ps = Path("/sys/class/power_supply")
         if not ps.exists():
@@ -206,7 +278,9 @@ class ProfileWatcher:
                 b_status = self._get_battery_status()
                 if b_status is not None:
                     if b_status != self._last_battery_status:
-                        logger.info(f"Mouse battery status changed: {self._last_battery_status} -> {b_status}")
+                        logger.info(
+                            f"Mouse battery status changed: {self._last_battery_status} -> {b_status}"
+                        )
                         self._last_battery_status = b_status
                         self.backend.enforce_lighting_state()
                         if b_status == "Charging":
@@ -260,7 +334,9 @@ class ProfileWatcher:
             if staged == req_profile and file_mtime <= self._staged_slot5_mtime:
                 # Already staged and up-to-date! Instant switch (<5ms, 0 flash writes)
                 if self._last_active_slot != 5:
-                    logger.info(f"Switching to already staged Slot 5 for {rule.name} ({req_profile})")
+                    logger.info(
+                        f"Switching to already staged Slot 5 for {rule.name} ({req_profile})"
+                    )
                     self.backend.set_active_profile(5)
                     self._last_active_slot = 5
                     self._current_matched_rule = rule
@@ -268,7 +344,9 @@ class ProfileWatcher:
                         self.on_profile_switched(5, rule.name)
             else:
                 # Different overflow game or profile modified on disk! Flash profile to Slot 5
-                logger.info(f"Staging profile '{req_profile}' into Slot 5 for {rule.name}")
+                logger.info(
+                    f"Staging profile '{req_profile}' into Slot 5 for {rule.name}"
+                )
                 p_data = self.mgr.load_profile_from_library(req_profile)
                 if p_data:
                     ok, msg = self.backend.flash_single_profile(5, p_data)
@@ -276,7 +354,11 @@ class ProfileWatcher:
                         self.settings.staged_slot5_profile = req_profile
                         self._staged_slot5_mtime = file_mtime
                         self.mgr.save_settings(self.settings)
-                        self._last_settings_mtime = self.mgr.settings_file.stat().st_mtime if self.mgr.settings_file.exists() else 0.0
+                        self._last_settings_mtime = (
+                            self.mgr.settings_file.stat().st_mtime
+                            if self.mgr.settings_file.exists()
+                            else 0.0
+                        )
                         self._last_active_slot = 5
                         self._current_matched_rule = rule
                         if self.on_profile_switched:

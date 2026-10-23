@@ -4,11 +4,10 @@ Directly configures and burns RGB lighting effects (Static, Breathing,
 Color Cycle, Off) into Logitech mouse EEPROM and RAM over HID++ 2.0 (0x8071).
 """
 
-from typing import Optional, Tuple
 try:
-    from PySide6 import QtWidgets, QtCore, QtGui
+    from PySide6 import QtCore, QtGui, QtWidgets
 except ImportError:
-    from PyQt6 import QtWidgets, QtCore, QtGui
+    from PyQt6 import QtCore, QtGui, QtWidgets
 
 from core.backend import MouseBackend
 
@@ -16,7 +15,7 @@ from core.backend import MouseBackend
 class RGBLightingDialog(QtWidgets.QDialog):
     """Dialog for configuring hardware RGB lighting directly on the mouse."""
 
-    def __init__(self, backend: MouseBackend, parent: Optional[QtWidgets.QWidget] = None):
+    def __init__(self, backend: MouseBackend, parent: QtWidgets.QWidget | None = None):
         super().__init__(parent)
         self.backend = backend
         self.setWindowTitle("Hardware RGB Lighting")
@@ -29,13 +28,19 @@ class RGBLightingDialog(QtWidgets.QDialog):
                 self.qsettings.setValue(key, old_settings.value(key))
 
         # Load saved preferences or defaults
-        self.current_effect = self.qsettings.value("rgb_effect_mode", "static", type=str)
-        self.current_color = QtGui.QColor(self.qsettings.value("rgb_color_hex", "#00aeef", type=str))
+        self.current_effect = self.qsettings.value(
+            "rgb_effect_mode", "static", type=str
+        )
+        self.current_color = QtGui.QColor(
+            self.qsettings.value("rgb_color_hex", "#00aeef", type=str)
+        )
         if not self.current_color.isValid():
             self.current_color = QtGui.QColor(0, 174, 239)
         self.current_brightness = int(self.qsettings.value("rgb_brightness", 100))
         self.current_speed_ms = int(self.qsettings.value("rgb_speed_ms", 5000))
-        self.current_waveform = int(self.qsettings.value("rgb_waveform", 6))  # Default to Exponential (6) for smoother low-brightness curve
+        self.current_waveform = int(
+            self.qsettings.value("rgb_waveform", 6)
+        )  # Default to Exponential (6) for smoother low-brightness curve
 
         self._setup_styling()
         self._init_ui()
@@ -176,7 +181,9 @@ class RGBLightingDialog(QtWidgets.QDialog):
         self.btn_color_picker.clicked.connect(self._on_pick_color)
 
         self.lbl_hex = QtWidgets.QLabel()
-        self.lbl_hex.setStyleSheet("font-family: monospace; font-size: 13px; font-weight: bold;")
+        self.lbl_hex.setStyleSheet(
+            "font-family: monospace; font-size: 13px; font-weight: bold;"
+        )
 
         color_picker_row.addWidget(self.btn_color_picker, stretch=3)
         color_picker_row.addWidget(self.lbl_hex, stretch=1)
@@ -247,7 +254,9 @@ class RGBLightingDialog(QtWidgets.QDialog):
         wf_layout = QtWidgets.QVBoxLayout(self.waveform_group)
 
         self.combo_waveform = QtWidgets.QComboBox()
-        self.combo_waveform.addItem("Exponential (Compensates for Low-Light Stepping)", 6)
+        self.combo_waveform.addItem(
+            "Exponential (Compensates for Low-Light Stepping)", 6
+        )
         self.combo_waveform.addItem("Sine Wave (Standard)", 1)
         self.combo_waveform.addItem("Smooth Default", 0)
         self.combo_waveform.addItem("Sharkfin", 5)
@@ -257,7 +266,9 @@ class RGBLightingDialog(QtWidgets.QDialog):
         if idx_wf >= 0:
             self.combo_waveform.setCurrentIndex(idx_wf)
         self.combo_waveform.currentIndexChanged.connect(
-            lambda idx: setattr(self, "current_waveform", self.combo_waveform.currentData())
+            lambda idx: setattr(
+                self, "current_waveform", self.combo_waveform.currentData()
+            )
         )
         wf_layout.addWidget(self.combo_waveform)
         main_layout.addWidget(self.waveform_group)
@@ -265,7 +276,9 @@ class RGBLightingDialog(QtWidgets.QDialog):
         # Status / Feedback Label
         self.lbl_status = QtWidgets.QLabel("")
         self.lbl_status.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.lbl_status.setStyleSheet("color: #10b981; font-size: 12px; font-weight: bold; min-height: 20px;")
+        self.lbl_status.setStyleSheet(
+            "color: #10b981; font-size: 12px; font-weight: bold; min-height: 20px;"
+        )
         main_layout.addWidget(self.lbl_status)
 
         # Action Buttons
@@ -326,7 +339,11 @@ class RGBLightingDialog(QtWidgets.QDialog):
         hex_str = self.current_color.name().upper()
         self.lbl_hex.setText(hex_str)
         # Invert text color for readability if needed
-        lum = (0.299 * self.current_color.red() + 0.587 * self.current_color.green() + 0.114 * self.current_color.blue())
+        lum = (
+            0.299 * self.current_color.red()
+            + 0.587 * self.current_color.green()
+            + 0.114 * self.current_color.blue()
+        )
         fg_col = "#000000" if lum > 140 else "#ffffff"
         self.btn_color_picker.setStyleSheet(
             f"background-color: {hex_str}; color: {fg_col}; font-weight: bold; border-radius: 4px; padding: 8px;"
@@ -338,7 +355,9 @@ class RGBLightingDialog(QtWidgets.QDialog):
         self._update_ui_state()
 
     def _on_pick_color(self):
-        col = QtWidgets.QColorDialog.getColor(self.current_color, self, "Select RGB Lighting Color")
+        col = QtWidgets.QColorDialog.getColor(
+            self.current_color, self, "Select RGB Lighting Color"
+        )
         if col.isValid():
             self.current_color = col
             self._update_color_swatch()
@@ -380,13 +399,17 @@ class RGBLightingDialog(QtWidgets.QDialog):
             brightness=self.current_brightness,
             period_ms=self.current_speed_ms,
             waveform=wf,
-            persistent=False
+            persistent=False,
         )
         if ok:
-            self.lbl_status.setStyleSheet("color: #10b981; font-size: 12px; font-weight: bold;")
+            self.lbl_status.setStyleSheet(
+                "color: #10b981; font-size: 12px; font-weight: bold;"
+            )
             self.lbl_status.setText("Live preview active (RAM).")
         else:
-            self.lbl_status.setStyleSheet("color: #ef4444; font-size: 12px; font-weight: bold;")
+            self.lbl_status.setStyleSheet(
+                "color: #ef4444; font-size: 12px; font-weight: bold;"
+            )
             self.lbl_status.setText(f"Preview error: {msg}")
 
     def _on_burn_to_memory(self):
@@ -408,14 +431,18 @@ class RGBLightingDialog(QtWidgets.QDialog):
             brightness=self.current_brightness,
             period_ms=self.current_speed_ms,
             waveform=wf,
-            persistent=True
+            persistent=True,
         )
         if ok:
             self._save_preferences()
-            self.lbl_status.setStyleSheet("color: #10b981; font-size: 12px; font-weight: bold;")
+            self.lbl_status.setStyleSheet(
+                "color: #10b981; font-size: 12px; font-weight: bold;"
+            )
             self.lbl_status.setText("Effect burned to mouse memory (EEPROM).")
         else:
-            self.lbl_status.setStyleSheet("color: #ef4444; font-size: 12px; font-weight: bold;")
+            self.lbl_status.setStyleSheet(
+                "color: #ef4444; font-size: 12px; font-weight: bold;"
+            )
             self.lbl_status.setText(f"Burn error: {msg}")
 
     def _on_turn_off(self):
@@ -426,8 +453,12 @@ class RGBLightingDialog(QtWidgets.QDialog):
         if ok:
             self.combo_effect.setCurrentIndex(self.combo_effect.findData("off"))
             self._save_preferences()
-            self.lbl_status.setStyleSheet("color: #10b981; font-size: 12px; font-weight: bold;")
+            self.lbl_status.setStyleSheet(
+                "color: #10b981; font-size: 12px; font-weight: bold;"
+            )
             self.lbl_status.setText("Lighting completely turned off.")
         else:
-            self.lbl_status.setStyleSheet("color: #ef4444; font-size: 12px; font-weight: bold;")
+            self.lbl_status.setStyleSheet(
+                "color: #ef4444; font-size: 12px; font-weight: bold;"
+            )
             self.lbl_status.setText(f"Error: {msg}")
