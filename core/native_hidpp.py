@@ -256,6 +256,87 @@ class NativeHIDPP:
         commit_resp = self.request(idx, 0x81)
         return commit_resp is not None
 
+    def set_rgb_effect(
+        self,
+        effect_type: str,
+        r: int = 255,
+        g: int = 255,
+        b: int = 255,
+        brightness: int = 100,
+        period_ms: int = 3000,
+        waveform: int = 1,
+        persistent: bool = True
+    ) -> bool:
+        """Sets hardware RGB lighting effect directly on mouse EEPROM and RAM.
+
+        effect_type: 'off', 'static', 'breathing', 'cycle'
+        brightness: 0 to 100
+        period_ms: 500 to 30000 ms
+        waveform: 0=Default, 1=Sine, 2=Square, 3=Triangle, 4=Sawtooth, 5=Sharkfin, 6=Exponential
+        persistent: True for EEPROM + RAM (0x03), False for RAM live preview (0x01)
+        """
+        if self.fd is None and not self.open():
+            return False
+
+        if effect_type == "off" or brightness <= 0:
+            return self.turn_off_rgb()
+
+        rgb_idx = self.discover_feature(FEATURE_RGB_EFFECTS)
+        if not rgb_idx:
+            return False
+
+        persist_byte = 0x03 if persistent else 0x01
+
+        period = max(500, min(30000, period_ms))
+        p_hi = (period >> 8) & 0xFF
+        p_lo = period & 0xFF
+        intensity_val = max(1, min(100, brightness))
+
+        try:
+            # 1. Host software control of clusters and power modes
+            self.request(rgb_idx, 0x51, bytes([0x01, 0x03, 0x00]))
+
+            # 2. Power mode 0 = Full Power ON
+            self.request(rgb_idx, 0x81, bytes([0x01, 0x00, 0x00]))
+
+            # 3. Enable bootUpEffect in NvConfig so the effect runs on boot / power-on
+            self.request(rgb_idx, 0x31, bytes([0x01, 0x00, 0x01, 0x01]))
+
+            if effect_type == "static":
+                # Static / Fixed (Effect idx 1)
+                # Static has no intensity register in HID++, so scale RGB directly
+                bright_factor = max(0.0, min(1.0, brightness / 100.0))
+                r_val = int(r * bright_factor) & 0xFF
+                g_val = int(g * bright_factor) & 0xFF
+                b_val = int(b * bright_factor) & 0xFF
+                # bs: [r, g, b, ramp=0x02, 0, 0, 0, 0, 0, 0]
+                params = bytes([0x00, 0x01, r_val, g_val, b_val, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, persist_byte])
+                return self.request(rgb_idx, 0x11, params) is not None
+
+            elif effect_type == "breathing":
+                # Breathing (Effect idx 2 / 0x0A)
+                # Keep full-scale RGB so the hardware PWM sine generator has full 8-bit dynamic range
+                # to prevent low-brightness quantization stutter.
+                # waveform: 0x01=Sine, 0x06=Exponential (perceptual gamma curve), etc.
+                r_val = max(0, min(255, r))
+                g_val = max(0, min(255, g))
+                b_val = max(0, min(255, b))
+                wf = max(0, min(6, waveform))
+                # bs: [r, g, b, p_hi, p_lo, waveform, intensity, 0, 0, 0]
+                params = bytes([0x00, 0x02, r_val, g_val, b_val, p_hi, p_lo, wf, intensity_val, 0x00, 0x00, 0x00, persist_byte])
+                return self.request(rgb_idx, 0x11, params) is not None
+
+            elif effect_type == "cycle":
+                # Color Cycle (Effect idx 3)
+                # bs: [0, 0, 0, 0, 0, p_hi, p_lo, intensity, 0, 0]
+                # Period is at offset 5..6 (bs[5:7]), intensity is at offset 7 (bs[7])
+                params = bytes([0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, p_hi, p_lo, intensity_val, 0x00, 0x00, persist_byte])
+                return self.request(rgb_idx, 0x11, params) is not None
+
+            return False
+        except Exception:
+            return False
+
     def turn_off_rgb(self) -> bool:
         """Completely and permanently disables and shuts off all RGB LED zones on the mouse.
 

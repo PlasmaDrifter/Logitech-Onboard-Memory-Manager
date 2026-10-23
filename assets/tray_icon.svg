@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 2 52 57" width="64" height="64">
+  <!-- Thumb Wing Flare (Integrated) -->
+  <path d="M 17 31 C 10 35, 9 43, 13 48 C 15 51, 18 53, 22 54 L 20 48 Z" fill="#64748b"/>
+  <!-- Main Ergonomic Body -->
+  <path d="M 32 6 
+           C 22 6, 17 15, 17 31 
+           C 17 46, 21 58, 32 58 
+           C 43 58, 47 46, 47 31 
+           C 47 15, 42 6, 32 6 Z" 
+        fill="#94a3b8" stroke="#475569" stroke-width="1"/>
+  <!-- Left Clicker Angle Accent -->
+  <path d="M 22 17 L 24 25" stroke="#cbd5e1" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- Button Split -->
+  <line x1="32" y1="7" x2="32" y2="23" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Scroll Wheel -->
+  <rect x="29" y="13" width="6" height="13" rx="3" fill="#1e293b" stroke="#cbd5e1" stroke-width="1.0"/>
+  <line x1="30" y1="17" x2="34" y2="17" stroke="#e2e8f0" stroke-width="1.2"/>
+  <line x1="30" y1="21" x2="34" y2="21" stroke="#e2e8f0" stroke-width="1.2"/>
+</svg>

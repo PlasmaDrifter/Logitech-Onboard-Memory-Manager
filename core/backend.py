@@ -114,10 +114,80 @@ def get_backup_dir() -> Path:
     return config_dir
 
 
+def prune_backups(max_keep: int = 50) -> int:
+    """Prunes timestamped backup YAML files to retain only the newest `max_keep` files."""
+    backup_dir = get_backup_dir()
+    if not backup_dir.exists():
+        return 0
+    try:
+        yaml_files = sorted(
+            [f for f in backup_dir.glob("*.yaml") if f.is_file()],
+            key=lambda p: p.stat().st_mtime
+        )
+        excess = len(yaml_files) - max_keep
+        if excess <= 0:
+            return 0
+        pruned_count = 0
+        for f in yaml_files[:excess]:
+            try:
+                f.unlink()
+                pruned_count += 1
+            except Exception:
+                pass
+        return pruned_count
+    except Exception:
+        return 0
+
+
 class MouseBackend:
     def __init__(self, device_name: str = "G502"):
         self.device_name = device_name
         self.raw_yaml_cache: Optional[OnboardProfilesYaml] = None
+
+    def _save_backup(self, config: OnboardConfig) -> Optional[Path]:
+        """Saves a timestamped backup before writing changes."""
+        import datetime
+        try:
+            ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_file = get_backup_dir() / f"pre_write_{ts}.yaml"
+
+            profiles_yaml = {}
+            for pid, prof in config.profiles.items():
+                p_yaml = OnboardProfileYaml(
+                    angle_snap=getattr(prof, "angle_snap", 0),
+                    blue=getattr(prof, "blue", 255),
+                    buttons=[ButtonYaml(**b.to_yaml_dict()) for b in prof.buttons],
+                    gbuttons=[ButtonYaml(**b.to_yaml_dict()) for b in prof.gbuttons],
+                    enabled=getattr(prof, "enabled", 1),
+                    green=getattr(prof, "green", 255),
+                    name=getattr(prof, "name", f"Profile {pid}"),
+                    power_mode=getattr(prof, "power_mode", 255),
+                    red=getattr(prof, "red", 255),
+                    report_rate=getattr(prof, "report_rate", 1),
+                    resolution_default_index=getattr(prof, "resolution_default_index", 0),
+                    resolution_shift_index=getattr(prof, "resolution_shift_index", 0),
+                    resolutions=list(getattr(prof, "resolutions", [800, 1200, 1600, 2400, 3200])),
+                    sector=getattr(prof, "sector", pid),
+                )
+                profiles_yaml[pid] = p_yaml
+
+            root_yaml = OnboardProfilesYaml(
+                name=config.device_name,
+                count=config.count,
+                buttons=config.buttons_count,
+                gbuttons=config.gbuttons_count,
+                sectors=config.sectors,
+                size=config.size,
+                version=config.version,
+                profiles=profiles_yaml,
+            )
+
+            yaml_text = yaml.dump(root_yaml, sort_keys=True)
+            with open(backup_file, "w") as f:
+                f.write(yaml_text)
+            return backup_file
+        except Exception:
+            return None
 
     @staticmethod
     def _translate_raw_to_ui_buttons(raw_btns: list) -> list:
@@ -156,7 +226,6 @@ class MouseBackend:
             drv = NativeHIDPP()
             if drv.open():
                 ok = drv.set_active_profile(profile_num)
-                drv.turn_off_rgb()
                 drv.close()
                 if ok:
                     return True, f"Active profile set to Profile {profile_num}"
@@ -172,6 +241,37 @@ class MouseBackend:
                 drv.turn_off_rgb()
                 drv.close()
                 return True, "Mouse lighting turned completely off."
+        except Exception as e:
+            return False, str(e)
+        return False, "Could not access mouse"
+
+    def set_lighting_effect(
+        self,
+        effect_type: str,
+        r: int = 255,
+        g: int = 255,
+        b: int = 255,
+        brightness: int = 100,
+        period_ms: int = 3000,
+        waveform: int = 1,
+        persistent: bool = True
+    ) -> Tuple[bool, str]:
+        """Sets hardware RGB lighting effect directly on mouse EEPROM and RAM."""
+        try:
+            drv = NativeHIDPP()
+            if drv.open():
+                ok = drv.set_rgb_effect(
+                    effect_type=effect_type,
+                    r=r, g=g, b=b,
+                    brightness=brightness,
+                    period_ms=period_ms,
+                    waveform=waveform,
+                    persistent=persistent
+                )
+                drv.close()
+                if ok:
+                    return True, "Lighting effect applied to mouse hardware."
+                return False, "Mouse rejected lighting effect parameters."
         except Exception as e:
             return False, str(e)
         return False, "Could not access mouse"
@@ -282,7 +382,6 @@ class MouseBackend:
                 )
                 config.profiles[slot_num] = prof
 
-            drv.turn_off_rgb()
             drv.close()
             return config, "Success"
         except Exception as e:
@@ -431,8 +530,14 @@ class MouseBackend:
         b[208:240] = b"\x00" * 32
         return bytes(b[:240])
 
-    def write_profiles(self, config: OnboardConfig) -> Tuple[bool, str]:
+    def write_profiles(self, config: OnboardConfig, auto_turn_off_rgb: bool = False) -> Tuple[bool, str]:
         """Saves a timestamped backup and burns the updated configuration to mouse flash memory."""
+        try:
+            self._save_backup(config)
+            prune_backups(50)
+        except Exception:
+            pass
+
         try:
             drv = NativeHIDPP()
             if not drv.open():
@@ -444,7 +549,8 @@ class MouseBackend:
                 drv.write_sector(pid, sec_bytes)
 
             drv.set_active_profile(config.active_profile_id or 1)
-            drv.turn_off_rgb()
+            if auto_turn_off_rgb:
+                drv.turn_off_rgb()
             drv.close()
             return True, "Successfully saved to mouse hardware memory!"
         except Exception as e:
@@ -565,7 +671,6 @@ class MouseBackend:
             ok = drv.write_sector(slot_num, sec_bytes)
             if ok:
                 drv.set_active_profile(slot_num)
-                drv.turn_off_rgb()
                 drv.close()
                 return True, f"Successfully staged Profile to Slot {slot_num}"
             drv.close()

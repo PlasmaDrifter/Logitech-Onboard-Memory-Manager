@@ -6,7 +6,7 @@ import logging
 import threading
 from typing import Optional, Callable
 from .profile_library import ProfileLibraryManager, GameRule, WatcherSettings
-from .backend import MouseBackend
+from .backend import MouseBackend, prune_backups
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +23,8 @@ class ProfileWatcher:
         self._thread: Optional[threading.Thread] = None
         self._last_active_slot: Optional[int] = None
         self._current_matched_rule: Optional[GameRule] = None
+        self._last_prune_time: float = 0.0
+        self._prune_interval_sec: float = 3600.0  # Hourly scheduled pruning
 
         # Callbacks for GUI updates
         self.on_profile_switched: Optional[Callable[[int, Optional[str]], None]] = None
@@ -121,6 +123,15 @@ class ProfileWatcher:
                 continue
 
             try:
+                # Scheduled backup pruning (runs on startup and every hour)
+                now = time.time()
+                if now - self._last_prune_time >= self._prune_interval_sec:
+                    self._last_prune_time = now
+                    try:
+                        prune_backups(50)
+                    except Exception as pe:
+                        logger.debug(f"Periodic backup pruning error: {pe}")
+
                 win_class, win_title = self.get_active_window_info()
                 rule = self._match_active_rule(win_class, win_title)
 

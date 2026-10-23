@@ -10,7 +10,7 @@ try:
 except ImportError:
     from PyQt6 import QtWidgets, QtCore, QtGui
 
-from core.backend import MouseBackend, get_backup_dir
+from core.backend import MouseBackend, get_backup_dir, prune_backups
 from core.models import OnboardConfig, Profile, ButtonAction
 from core.keycodes import (
     G502_BUTTON_LABELS,
@@ -21,6 +21,7 @@ from core.keycodes import (
 from ui.button_editor_dialog import ButtonEditorDialog
 from ui.mouse_canvas import MouseCanvas
 from ui.games_tab import GamesTab
+from ui.rgb_dialog import RGBLightingDialog
 from core.profile_watcher import ProfileWatcher
 
 
@@ -54,7 +55,7 @@ class WorkerThread(QtCore.QThread):
             self.finished_signal.emit(False, str(e))
 
 
-APP_VERSION = "v0.8.12"
+APP_VERSION = "v0.9.0"
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -64,6 +65,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.config: Optional[OnboardConfig] = None
         self.current_gshift_mode = False
         self.current_model_key = "g502"
+
+        self.qsettings = QtCore.QSettings("LogitechLinux", "OnboardMemoryManager")
+        self.force_quit = False
+        self.tray_icon: Optional[QtWidgets.QSystemTrayIcon] = None
+        self.tray_profile_actions = {}
 
         self.watcher = ProfileWatcher(backend=self.backend)
         self.games_tab = GamesTab(self.watcher)
@@ -78,14 +84,58 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self._setup_styling()
         self._init_ui()
+        self._init_tray()
 
         # Initial read from mouse
         QtCore.QTimer.singleShot(200, self.on_read_from_mouse)
 
     def closeEvent(self, event: QtGui.QCloseEvent):
+        min_to_tray = True
+        if hasattr(self, "chk_minimize_to_tray"):
+            min_to_tray = self.chk_minimize_to_tray.isChecked()
+        elif hasattr(self, "qsettings"):
+            min_to_tray = self.qsettings.value("minimize_to_tray_on_close", True, type=bool)
+
+        if self.tray_icon and self.tray_icon.isVisible() and min_to_tray and not self.force_quit:
+            event.ignore()
+            self.hide()
+            if hasattr(self, "action_show_hide"):
+                self.action_show_hide.setText("Show Logitech OMM")
+            hint_shown = self.qsettings.value("tray_hint_shown", False, type=bool)
+            if not hint_shown:
+                self.tray_icon.showMessage(
+                    "Logitech Onboard Memory Manager",
+                    "Application is minimized to the system tray.",
+                    QtWidgets.QSystemTrayIcon.MessageIcon.Information,
+                    2500
+                )
+                self.qsettings.setValue("tray_hint_shown", True)
+            return
+
+        if self.tray_icon:
+            self.tray_icon.hide()
         if hasattr(self, "watcher") and self.watcher:
             self.watcher.stop()
         super().closeEvent(event)
+
+    def changeEvent(self, event: QtCore.QEvent):
+        super().changeEvent(event)
+        if event.type() == QtCore.QEvent.Type.WindowStateChange:
+            if hasattr(self, "action_show_hide"):
+                if self.isMinimized() or not self.isVisible():
+                    self.action_show_hide.setText("Show Logitech OMM")
+                else:
+                    self.action_show_hide.setText("Hide Logitech OMM")
+
+    def hideEvent(self, event: QtGui.QHideEvent):
+        super().hideEvent(event)
+        if hasattr(self, "action_show_hide"):
+            self.action_show_hide.setText("Show Logitech OMM")
+
+    def showEvent(self, event: QtGui.QShowEvent):
+        super().showEvent(event)
+        if hasattr(self, "action_show_hide"):
+            self.action_show_hide.setText("Hide Logitech OMM")
 
     def _setup_styling(self):
         self.setStyleSheet("""
@@ -259,19 +309,29 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_open_backups.clicked.connect(self.on_open_backups)
         bottom_layout.addWidget(self.btn_open_backups)
 
-        self.btn_turn_off_rgb = QtWidgets.QPushButton("Turn Off RGB Lighting")
+        self.btn_rgb_dialog = QtWidgets.QPushButton("Hardware Lighting...")
+        self.btn_rgb_dialog.setObjectName("secondaryBtn")
+        self.btn_rgb_dialog.clicked.connect(self.on_open_rgb_dialog)
+        bottom_layout.addWidget(self.btn_rgb_dialog)
+
+        self.btn_turn_off_rgb = QtWidgets.QPushButton("Turn Off RGB")
         self.btn_turn_off_rgb.setObjectName("secondaryBtn")
         self.btn_turn_off_rgb.clicked.connect(self.on_turn_off_lighting)
         bottom_layout.addWidget(self.btn_turn_off_rgb)
 
-        self.qsettings = QtCore.QSettings("LogitechLinux", "OnboardMemoryManager")
-        auto_off_saved = self.qsettings.value("auto_turn_off_rgb", True, type=bool)
+        auto_off_saved = self.qsettings.value("auto_turn_off_rgb", False, type=bool)
         self.chk_auto_turn_off_rgb = QtWidgets.QCheckBox("Auto-turn off RGB on save")
         self.chk_auto_turn_off_rgb.setChecked(auto_off_saved)
         self.chk_auto_turn_off_rgb.toggled.connect(
             lambda val: self.qsettings.setValue("auto_turn_off_rgb", val)
         )
         bottom_layout.addWidget(self.chk_auto_turn_off_rgb)
+
+        min_tray_saved = self.qsettings.value("minimize_to_tray_on_close", True, type=bool)
+        self.chk_minimize_to_tray = QtWidgets.QCheckBox("Minimize to tray on close")
+        self.chk_minimize_to_tray.setChecked(min_tray_saved)
+        self.chk_minimize_to_tray.toggled.connect(self._on_chk_minimize_toggled)
+        bottom_layout.addWidget(self.chk_minimize_to_tray)
 
         bottom_layout.addStretch()
 
@@ -280,6 +340,139 @@ class MainWindow(QtWidgets.QMainWindow):
         bottom_layout.addWidget(self.lbl_active_info)
 
         main_layout.addLayout(bottom_layout)
+
+    def _init_tray(self):
+        if not QtWidgets.QSystemTrayIcon.isSystemTrayAvailable():
+            return
+
+        tray_icon_path = Path(__file__).resolve().parent.parent / "assets" / "tray_icon.svg"
+        if not tray_icon_path.exists():
+            tray_icon_path = Path(__file__).resolve().parent.parent / "assets" / "icon.svg"
+        icon = QtGui.QIcon(str(tray_icon_path)) if tray_icon_path.exists() else self.windowIcon()
+
+        self.tray_icon = QtWidgets.QSystemTrayIcon(icon, self)
+        self.tray_icon.setToolTip("Logitech Onboard Memory Manager")
+
+        tray_menu = QtWidgets.QMenu(self)
+
+        self.action_show_hide = QtGui.QAction("Hide Logitech OMM", self)
+        self.action_show_hide.triggered.connect(self._toggle_visibility)
+        tray_menu.addAction(self.action_show_hide)
+
+        tray_menu.addSeparator()
+
+        profiles_menu = tray_menu.addMenu("Switch Profile")
+        self.tray_profile_group = QtGui.QActionGroup(self)
+        self.tray_profile_group.setExclusive(True)
+        self.tray_profile_actions = {}
+
+        for pid in range(1, 6):
+            act = QtGui.QAction(f"Profile {pid}", self)
+            act.setCheckable(True)
+            act.triggered.connect(lambda checked, p=pid: self._on_tray_profile_selected(p))
+            self.tray_profile_group.addAction(act)
+            profiles_menu.addAction(act)
+            self.tray_profile_actions[pid] = act
+
+        tray_menu.addSeparator()
+
+        action_rgb = QtGui.QAction("Hardware RGB Lighting...", self)
+        action_rgb.triggered.connect(self.on_open_rgb_dialog)
+        tray_menu.addAction(action_rgb)
+
+        action_rgb_off = QtGui.QAction("Turn Off RGB", self)
+        action_rgb_off.triggered.connect(self.on_turn_off_lighting)
+        tray_menu.addAction(action_rgb_off)
+
+        tray_menu.addSeparator()
+
+        self.action_tray_minimize = QtGui.QAction("Minimize to Tray on Close", self)
+        self.action_tray_minimize.setCheckable(True)
+        min_saved = self.qsettings.value("minimize_to_tray_on_close", True, type=bool)
+        self.action_tray_minimize.setChecked(min_saved)
+        self.action_tray_minimize.toggled.connect(self._on_tray_minimize_toggled)
+        tray_menu.addAction(self.action_tray_minimize)
+
+        tray_menu.addSeparator()
+
+        action_quit = QtGui.QAction("Quit", self)
+        action_quit.triggered.connect(self.quit_app)
+        tray_menu.addAction(action_quit)
+
+        self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.activated.connect(self._on_tray_activated)
+        self.tray_icon.show()
+
+    def present_to_user(self):
+        """Restores the window from minimized/tray state and brings it to foreground."""
+        self.showNormal()
+        self.raise_()
+        self.activateWindow()
+        if hasattr(self, "action_show_hide"):
+            self.action_show_hide.setText("Hide Logitech OMM")
+
+    def _toggle_visibility(self):
+        if self.isVisible() and not self.isMinimized():
+            self.hide()
+            if hasattr(self, "action_show_hide"):
+                self.action_show_hide.setText("Show Logitech OMM")
+        else:
+            self.present_to_user()
+
+    def _on_tray_activated(self, reason):
+        if reason in (
+            QtWidgets.QSystemTrayIcon.ActivationReason.Trigger,
+            QtWidgets.QSystemTrayIcon.ActivationReason.DoubleClick,
+        ):
+            self._toggle_visibility()
+
+    def _on_tray_profile_selected(self, pid: int):
+        self.device_status.setText(f"Switching active profile to Profile {pid}...")
+        success, msg = self.backend.set_active_profile(pid)
+        if success:
+            if self.config:
+                self.config.active_profile_id = pid
+                self._rebuild_tabs()
+            self.lbl_active_info.setText(f"Active Profile on Mouse: Profile {pid}")
+            self.device_status.setText(f"Active Profile set to Profile {pid}.")
+            self._update_tray_profile_checked(pid)
+        else:
+            QtWidgets.QMessageBox.warning(self, "Profile Switch", f"Could not switch to Profile {pid}:\n{msg}")
+
+    def _on_tray_minimize_toggled(self, checked: bool):
+        self.qsettings.setValue("minimize_to_tray_on_close", checked)
+        if hasattr(self, "chk_minimize_to_tray") and self.chk_minimize_to_tray:
+            self.chk_minimize_to_tray.blockSignals(True)
+            self.chk_minimize_to_tray.setChecked(checked)
+            self.chk_minimize_to_tray.blockSignals(False)
+
+    def _on_chk_minimize_toggled(self, checked: bool):
+        self.qsettings.setValue("minimize_to_tray_on_close", checked)
+        if hasattr(self, "action_tray_minimize") and self.action_tray_minimize:
+            self.action_tray_minimize.blockSignals(True)
+            self.action_tray_minimize.setChecked(checked)
+            self.action_tray_minimize.blockSignals(False)
+
+    def _update_tray_profile_checked(self, active_pid: int):
+        if hasattr(self, "tray_profile_actions"):
+            for pid, act in self.tray_profile_actions.items():
+                act.blockSignals(True)
+                act.setChecked(pid == active_pid)
+                act.blockSignals(False)
+        if self.tray_icon:
+            self.tray_icon.setToolTip(f"Logitech Onboard Memory Manager (Profile {active_pid})")
+
+    def on_open_rgb_dialog(self):
+        dlg = RGBLightingDialog(self.backend, self)
+        dlg.exec()
+
+    def quit_app(self):
+        self.force_quit = True
+        if self.tray_icon:
+            self.tray_icon.hide()
+        if hasattr(self, "watcher") and self.watcher:
+            self.watcher.stop()
+        QtWidgets.QApplication.quit()
 
     def on_turn_off_lighting(self):
         self.device_status.setText("Shutting off mouse RGB LEDs...")
@@ -313,6 +506,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.device_title.setText(f"{config.device_name} (Onboard Memory)")
         self.device_status.setText("Connected and synchronized.")
         self.lbl_active_info.setText(f"Active Profile on Mouse: Profile {config.active_profile_id}")
+        self._update_tray_profile_checked(config.active_profile_id)
 
         # Auto-detect mouse model and update combo selector
         p1 = config.profiles.get(1)
@@ -327,8 +521,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.combo_model.blockSignals(False)
 
         self._rebuild_tabs()
-        if hasattr(self, "chk_auto_turn_off_rgb") and self.chk_auto_turn_off_rgb.isChecked():
-            QtCore.QTimer.singleShot(100, self.backend.turn_off_lighting)
 
     def _on_model_selector_changed(self, idx: int):
         model_key = self.combo_model.currentData()
@@ -634,6 +826,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.config.active_profile_id = target_pid
             self.lbl_active_info.setText(f"Active Profile on Mouse: Profile {target_pid}")
             self.device_status.setText(msg)
+            self._update_tray_profile_checked(target_pid)
             self._rebuild_tabs()
         else:
             QtWidgets.QMessageBox.warning(self, "Error", f"Failed to switch active profile:\n{msg}")
@@ -657,7 +850,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_apply.setEnabled(False)
         self.btn_read.setEnabled(False)
 
-        self.worker = WorkerThread(self.backend.write_profiles, self.config)
+        auto_off = self.chk_auto_turn_off_rgb.isChecked() if hasattr(self, "chk_auto_turn_off_rgb") else False
+        self.worker = WorkerThread(self.backend.write_profiles, self.config, auto_off)
         self.worker.finished_signal.connect(self._on_write_finished)
         self.worker.start()
 
@@ -666,9 +860,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_read.setEnabled(True)
 
         if success:
-            if self.chk_auto_turn_off_rgb.isChecked():
-                self.backend.turn_off_lighting()
-
             # If Profile 5 was written, sync it to the library profile if one is assigned
             if hasattr(self, "games_tab") and self.config and 5 in self.config.profiles:
                 p5 = self.config.profiles[5]
@@ -693,5 +884,6 @@ class MainWindow(QtWidgets.QMainWindow):
             QtWidgets.QMessageBox.critical(self, "Write Failed", f"Could not write to mouse:\n\n{msg}")
 
     def on_open_backups(self):
+        prune_backups(50)
         bdir = str(get_backup_dir())
         QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(bdir))
