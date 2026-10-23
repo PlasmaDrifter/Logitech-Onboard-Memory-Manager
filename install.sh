@@ -26,8 +26,13 @@ ln -sf "${BIN_DIR}/omm-linux" "${BIN_DIR}/logitech-onboard-gui"
 cp "${SCRIPT_DIR}/assets/icon.svg" "${ICON_DIR}/omm-linux.svg"
 echo "Installed icon to: ${ICON_DIR}/omm-linux.svg"
 
-# 3. Install .desktop entry
-cp "${SCRIPT_DIR}/assets/omm-linux.desktop" "${APP_DIR}/omm-linux.desktop"
+# 3. Install .desktop entry (resolve absolute binary path for desktop environment launchers)
+sed -e "s|^Exec=.*|Exec=${BIN_DIR}/omm-linux|" \
+    -e "s|^Icon=.*|Icon=${ICON_DIR}/omm-linux.svg|" \
+    "${SCRIPT_DIR}/assets/omm-linux.desktop" > "${APP_DIR}/omm-linux.desktop"
+if ! grep -q "^Path=" "${APP_DIR}/omm-linux.desktop"; then
+    echo "Path=${SCRIPT_DIR}" >> "${APP_DIR}/omm-linux.desktop"
+fi
 echo "Installed desktop entry to: ${APP_DIR}/omm-linux.desktop"
 
 # 4. Refresh icon and desktop caches if utilities are available
