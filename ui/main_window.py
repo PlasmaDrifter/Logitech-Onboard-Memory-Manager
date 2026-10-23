@@ -88,6 +88,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self._init_ui()
         self._init_tray()
 
+        # Ensure backup folder is trimmed to the newest 50 files
+        prune_backups(50)
+
         # Initial read from mouse
         QtCore.QTimer.singleShot(200, self.on_read_from_mouse)
 
@@ -880,7 +883,6 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.games_tab.mgr.save_profile_to_library(staged, p5_dict)
 
             self.device_status.setText("Settings successfully burned to mouse memory.")
-            QtWidgets.QMessageBox.information(self, "Success", msg)
         else:
             self.device_status.setText("Failed to burn to memory.")
             QtWidgets.QMessageBox.critical(self, "Write Failed", f"Could not write to mouse:\n\n{msg}")

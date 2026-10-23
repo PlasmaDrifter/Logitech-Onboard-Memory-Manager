@@ -121,7 +121,7 @@ def prune_backups(max_keep: int = 50) -> int:
         return 0
     try:
         yaml_files = sorted(
-            [f for f in backup_dir.glob("*.yaml") if f.is_file()],
+            [f for f in backup_dir.iterdir() if f.is_file() and f.suffix.lower() in (".yaml", ".yml")],
             key=lambda p: p.stat().st_mtime
         )
         excess = len(yaml_files) - max_keep
