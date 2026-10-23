@@ -62,5 +62,14 @@ if command -v gtk-update-icon-cache >/dev/null 2>&1; then
     gtk-update-icon-cache -f -t "${HOME}/.local/share/icons/hicolor" >/dev/null 2>&1 || true
 fi
 
+if [ "$1" = "--purge" ] || [ "$1" = "--all" ]; then
+    echo "Purging configuration directories and installed AppImage..."
+    rm -rf "${HOME}/.config/omm-linux" "${HOME}/.config/logitech-onboard" "${HOME}/.config/OMMLinux" "${HOME}/.config/LogitechLinux"
+    rm -f "${HOME}/Applications/OMM Linux" "${HOME}/Applications/Logitech Onboard Memory Manager"
+    echo "Configurations and AppImages purged."
+else
+    echo "Note: User configuration and profile files in ~/.config/omm-linux were preserved."
+    echo "Pass --purge to also delete configurations and installed AppImage."
+fi
+
 echo "Uninstallation complete."
-echo "Note: User configuration and profile files in ~/.config/omm-linux were preserved."
