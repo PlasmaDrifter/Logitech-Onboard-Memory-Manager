@@ -702,6 +702,7 @@ class MainWindow(QtWidgets.QMainWindow):
         <ol style="line-height: 1.6; margin-left: -20px;">
           <li><b>Add a Game Rule:</b> Select your game from the installed list on the right and click <b>+ Add Rule</b>, or click <b>Capture Active Window</b> while your game is open.</li>
           <li><b>Set Your Bindings:</b> Select the rule and click <b>Edit Buttons</b> to configure custom keys, DPI stages, or macros for that specific game.</li>
+          <li><b>Apply to Mouse:</b> Click the blue <b>Apply to Mouse</b> button at the top right to save and burn your configurations to hardware memory so changes take effect.</li>
           <li><b>Auto-Switch While Playing:</b> Whenever you launch or Alt-Tab into that game, OMM instantly activates that game profile on your mouse (dynamically staged into Slot 5).</li>
           <li><b>Return to Desktop:</b> Whenever you leave the game, your mouse immediately returns to your default desktop profile (Slot 1).</li>
         </ol>
