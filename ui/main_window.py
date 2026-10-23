@@ -56,7 +56,59 @@ class WorkerThread(QtCore.QThread):
             self.finished_signal.emit(False, str(e))
 
 
-APP_VERSION = "v0.9.6"
+APP_VERSION = "v0.9.7"
+
+
+class HtmlTabBar(QtWidgets.QTabBar):
+    """Custom tab bar that supports HTML-formatted rich text in tab labels."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._html_texts = {}
+
+    def setHtmlText(self, index: int, html: str):
+        self._html_texts[index] = html
+        self.update()
+
+    def removeHtmlText(self, index: int):
+        self._html_texts.pop(index, None)
+
+    def clearHtmlTexts(self):
+        self._html_texts.clear()
+
+    def tabSizeHint(self, index: int) -> QtCore.QSize:
+        size = super().tabSizeHint(index)
+        if index in self._html_texts:
+            doc = QtGui.QTextDocument()
+            f = self.font()
+            doc.setDefaultFont(f)
+            doc.setHtml(self._html_texts[index])
+            size.setWidth(int(doc.idealWidth()) + 32)
+        return size
+
+    def paintEvent(self, event):
+        painter = QtWidgets.QStylePainter(self)
+        opt = QtWidgets.QStyleOptionTab()
+        for i in range(self.count()):
+            self.initStyleOption(opt, i)
+            if i in self._html_texts:
+                html = self._html_texts[i]
+                opt.text = ""
+                painter.drawControl(QtWidgets.QStyle.ControlElement.CE_TabBarTabShape, opt)
+                doc = QtGui.QTextDocument()
+                f = self.font()
+                if self.currentIndex() == i:
+                    f.setBold(True)
+                doc.setDefaultFont(f)
+                doc.setHtml(html)
+                rect = self.tabRect(i)
+                painter.save()
+                x = rect.x() + (rect.width() - doc.idealWidth()) / 2
+                y = rect.y() + (rect.height() - doc.size().height()) / 2
+                painter.translate(x, y)
+                doc.drawContents(painter)
+                painter.restore()
+            else:
+                painter.drawControl(QtWidgets.QStyle.ControlElement.CE_TabBarTab, opt)
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -149,7 +201,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.action_show_hide.setText("Hide OMM")
 
     def _setup_styling(self):
-        self.setStyleSheet("""
+        check_icon = Path(__file__).resolve().parent.parent / "assets" / "checkbox_check.svg"
+        check_icon_str = str(check_icon).replace("\\", "/")
+        css = """
             QMainWindow {
                 background-color: #1e1e24;
                 color: #e0e0e0;
@@ -239,7 +293,30 @@ class MainWindow(QtWidgets.QMainWindow):
                 padding: 4px 8px;
                 color: #ffffff;
             }
-        """)
+            QCheckBox#enableProfileChk {
+                font-size: 13px;
+                font-weight: bold;
+                color: #ffffff;
+                spacing: 9px;
+            }
+            QCheckBox#enableProfileChk::indicator {
+                width: 18px;
+                height: 18px;
+                border-radius: 4px;
+                border: 2px solid #818cf8;
+                background-color: #1a1c23;
+            }
+            QCheckBox#enableProfileChk::indicator:hover {
+                border-color: #a5b4fc;
+                background-color: #242731;
+            }
+            QCheckBox#enableProfileChk::indicator:checked {
+                border-color: #3b82f6;
+                background-color: #2563eb;
+                image: url(__CHECK_ICON_PATH__);
+            }
+        """.replace("__CHECK_ICON_PATH__", check_icon_str)
+        self.setStyleSheet(css)
 
     def _init_ui(self):
         central_widget = QtWidgets.QWidget()
@@ -304,6 +381,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Profile Tabs
         self.tab_widget = QtWidgets.QTabWidget()
+        self.tab_bar = HtmlTabBar(self.tab_widget)
+        self.tab_widget.setTabBar(self.tab_bar)
         self.tab_widget.currentChanged.connect(self.on_tab_changed)
         main_layout.addWidget(self.tab_widget, stretch=1)
 
@@ -555,11 +634,11 @@ class MainWindow(QtWidgets.QMainWindow):
     def _get_tab_label(self, prof: Profile) -> str:
         label = f"Profile {prof.profile_id}"
         if self.config and prof.profile_id == self.config.active_profile_id:
-            label += " (Active)"
+            label += ' (<span style="color: #4ade80; font-weight: bold;">Active</span>)'
         elif prof.enabled:
-            label += " (Enabled)"
+            label += ' (<span style="color: #60a5fa; font-weight: bold;">Enabled</span>)'
         else:
-            label += " (Disabled)"
+            label += ' (<span style="color: #9ca3af;">Disabled</span>)'
         return label
 
     def _rebuild_tabs(self, target_index: Optional[int] = None):
@@ -567,6 +646,8 @@ class MainWindow(QtWidgets.QMainWindow):
             return
 
         curr_tab = self.tab_widget.currentIndex() if target_index is None else target_index
+        if hasattr(self, "tab_bar") and hasattr(self.tab_bar, "clearHtmlTexts"):
+            self.tab_bar.clearHtmlTexts()
         self.tab_widget.clear()
 
         for pid in sorted(self.config.profiles.keys()):
@@ -574,7 +655,9 @@ class MainWindow(QtWidgets.QMainWindow):
             tab = self._create_profile_tab(prof)
             tab.profile_id = pid
             label = self._get_tab_label(prof)
-            self.tab_widget.addTab(tab, label)
+            idx = self.tab_widget.addTab(tab, "")
+            if hasattr(self, "tab_bar") and hasattr(self.tab_bar, "setHtmlText"):
+                self.tab_bar.setHtmlText(idx, label)
 
         # Append Games / Auto-Switching Tab
         if hasattr(self, "games_tab") and self.games_tab:
@@ -594,14 +677,15 @@ class MainWindow(QtWidgets.QMainWindow):
         settings_box = QtWidgets.QHBoxLayout()
 
         chk_enabled = QtWidgets.QCheckBox("Enable Profile in Mouse Memory")
+        chk_enabled.setObjectName("enableProfileChk")
         chk_enabled.setChecked(bool(prof.enabled))
         chk_enabled.toggled.connect(lambda val, p=prof: self._on_profile_enabled_toggled(p, val))
         settings_box.addWidget(chk_enabled)
 
         settings_box.addSpacing(20)
 
-        # Report Rate
-        settings_box.addWidget(QtWidgets.QLabel("Report Rate:"))
+        # Polling Rate
+        settings_box.addWidget(QtWidgets.QLabel("Polling Rate:"))
         combo_rate = QtWidgets.QComboBox()
         rate_map = {1: "1000 Hz (1ms)", 2: "500 Hz (2ms)", 4: "250 Hz (4ms)", 8: "125 Hz (8ms)"}
         for code, text in rate_map.items():
@@ -801,7 +885,11 @@ class MainWindow(QtWidgets.QMainWindow):
         for i in range(self.tab_widget.count()):
             tab = self.tab_widget.widget(i)
             if getattr(tab, "profile_id", None) == prof.profile_id:
-                self.tab_widget.setTabText(i, self._get_tab_label(prof))
+                label = self._get_tab_label(prof)
+                if hasattr(self, "tab_bar") and hasattr(self.tab_bar, "setHtmlText"):
+                    self.tab_bar.setHtmlText(i, label)
+                else:
+                    self.tab_widget.setTabText(i, label)
                 break
 
     def _on_rate_changed(self, prof: Profile, rate: int):
