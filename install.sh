@@ -12,7 +12,7 @@ mkdir -p "${BIN_DIR}" "${APP_DIR}" "${ICON_DIR}"
 echo "Installing OMM..."
 
 # Clean up legacy files if present
-rm -f "${BIN_DIR}/logitech-onboard-gui" "${APP_DIR}/logitech-onboard.desktop" "${ICON_DIR}/logitech-onboard.svg"
+rm -f "${BIN_DIR}/logitech-onboard-gui" "${APP_DIR}/logitech-onboard.desktop" "${ICON_DIR}/logitech-onboard.svg" "${APP_DIR}/omm-linux.desktop"
 
 # 1. Install application launcher script
 ln -sf "${SCRIPT_DIR}/main.py" "${BIN_DIR}/omm"
