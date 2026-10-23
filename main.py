@@ -14,6 +14,15 @@ script_dir = Path(__file__).resolve().parent
 if str(script_dir) not in sys.path:
     sys.path.insert(0, str(script_dir))
 
+# Set OS-level process name to 'omm' so tools like ps, top, and system monitors display 'omm'
+try:
+    import ctypes
+    libc = ctypes.CDLL("libc.so.6")
+    PR_SET_NAME = 15
+    libc.prctl(PR_SET_NAME, b"omm", 0, 0, 0)
+except Exception:
+    pass
+
 try:
     from PySide6 import QtWidgets, QtCore, QtGui
 except ImportError:
