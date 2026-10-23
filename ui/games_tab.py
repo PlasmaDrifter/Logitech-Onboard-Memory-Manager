@@ -1,5 +1,6 @@
 from __future__ import annotations
 import os
+import re
 import subprocess
 import time
 from typing import Optional, List, Dict, Any
@@ -13,15 +14,18 @@ from core.profile_library import ProfileLibraryManager, GameRule, WatcherSetting
 from core.profile_watcher import ProfileWatcher
 from core.service_manager import BackgroundServiceManager
 
+
 class RuleEditDialog(QtWidgets.QDialog):
     """Dialog to create or edit a game auto-switching rule."""
 
-    def __init__(self, parent=None, rule: Optional[GameRule] = None, available_profiles: List[str] = None):
+    def __init__(self, parent=None, mgr: Optional[ProfileLibraryManager] = None, rule: Optional[GameRule] = None, is_new: bool = True):
         super().__init__(parent)
-        self.setWindowTitle("Edit Game Rule" if rule else "Add Game Rule")
+        self.mgr = mgr
+        self.is_new = is_new if rule is None else is_new
+        self.setWindowTitle("Add Game Rule" if self.is_new else "Edit Game Rule")
         self.resize(580, 360)
         self.setMinimumSize(540, 340)
-        self.available_profiles = available_profiles or []
+        self._custom_profile_edited = False
         self._init_ui(rule)
 
     def _init_ui(self, rule: Optional[GameRule]):
@@ -60,57 +64,44 @@ class RuleEditDialog(QtWidgets.QDialog):
         self.combo_slot.currentIndexChanged.connect(self._on_slot_changed)
 
         profile_layout = QtWidgets.QHBoxLayout()
-        self.combo_profile = QtWidgets.QComboBox()
-        self.combo_profile.setMinimumHeight(32)
-        self.combo_profile.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
-        self.combo_profile.setEditable(True)
-        self.combo_profile.setInsertPolicy(QtWidgets.QComboBox.InsertPolicy.InsertAtTop)
-        for p in self.available_profiles:
-            self.combo_profile.addItem(p)
-
-        self.btn_new_profile = QtWidgets.QPushButton("+ New Profile")
-        self.btn_new_profile.setObjectName("secondaryBtn")
-        self.btn_new_profile.setMinimumHeight(32)
-        self.btn_new_profile.setToolTip("Type a new profile name for this game or application")
-        self.btn_new_profile.clicked.connect(self._on_prompt_new_profile)
-
-        profile_layout.addWidget(self.combo_profile, stretch=1)
-        profile_layout.addWidget(self.btn_new_profile)
+        self.edit_profile = QtWidgets.QLineEdit()
+        self.edit_profile.setMinimumHeight(32)
+        self.edit_profile.setPlaceholderText("Profile filename (e.g. Counter-Strike 2.json)")
+        self.edit_profile.textEdited.connect(self._on_profile_edited_by_user)
+        profile_layout.addWidget(self.edit_profile, stretch=1)
 
         self.lbl_profile = QtWidgets.QLabel("Library Profile:")
-        self.lbl_profile_hint = QtWidgets.QLabel(
-            "Select an existing profile or type a new name (e.g. Chrome.json). "
-            "After creating the rule, click 'Edit Buttons' to configure and save its bindings."
-        )
+        self.lbl_profile_hint = QtWidgets.QLabel()
         self.lbl_profile_hint.setStyleSheet("color: #9ca3af; font-size: 11px;")
         self.lbl_profile_hint.setWordWrap(True)
 
         self.chk_enabled = QtWidgets.QCheckBox("Rule Enabled")
         self.chk_enabled.setChecked(True)
 
-        self._custom_profile_selected = False
-        if rule:
+        if rule and not self.is_new:
             self.edit_name.setText(rule.name)
             self.edit_pattern.setText(rule.pattern)
             idx = self.combo_slot.findData(rule.target_slot)
             if idx != -1:
                 self.combo_slot.setCurrentIndex(idx)
-            p_idx = self.combo_profile.findText(rule.profile_name)
-            if p_idx != -1:
-                self.combo_profile.setCurrentIndex(p_idx)
-            else:
-                self.combo_profile.setEditText(rule.profile_name)
+            self.edit_profile.setText(rule.profile_name)
             self.chk_enabled.setChecked(rule.enabled)
-            self._custom_profile_selected = True
-        else:
+            self._custom_profile_edited = True
+        elif rule and self.is_new:
+            self.edit_name.setText(rule.name)
+            self.edit_pattern.setText(rule.pattern)
+            idx = self.combo_slot.findData(rule.target_slot)
+            if idx != -1:
+                self.combo_slot.setCurrentIndex(idx)
+            self.edit_profile.setText(rule.profile_name)
+            self.chk_enabled.setChecked(rule.enabled)
             self.edit_name.textChanged.connect(self._on_name_changed)
-            # Default to generic placeholder or name if already set
-            if self.edit_name.text().strip():
-                self.combo_profile.setEditText(f"{self.edit_name.text().strip()}.json")
-            elif not self.available_profiles:
-                self.combo_profile.setEditText("MyProfile.json")
-
-        self.combo_profile.currentIndexChanged.connect(self._on_profile_combo_changed)
+        else:
+            idx = self.combo_slot.findData(5)
+            if idx != -1:
+                self.combo_slot.setCurrentIndex(idx)
+            self.edit_name.textChanged.connect(self._on_name_changed)
+            self.edit_profile.setText("New Profile.json")
 
         form.addRow("Game Name:", self.edit_name)
         form.addRow("Match Pattern:", pattern_layout)
@@ -135,14 +126,17 @@ class RuleEditDialog(QtWidgets.QDialog):
         target_slot = self.combo_slot.currentData()
         if target_slot in (2, 3, 4):
             # Resident slot
-            self.combo_profile.setEnabled(False)
-            self.combo_profile.setToolTip("Slot 2-4 use the settings already saved directly in that hardware slot on the mouse.")
+            self.edit_profile.setEnabled(False)
+            self.edit_profile.setToolTip(f"Slot {target_slot} uses the hardware settings already flashed into Slot {target_slot} on the mouse.")
             self.lbl_profile_hint.setText(f"Uses the hardware settings already flashed into Slot {target_slot} on the mouse.")
         else:
             # Slot 5 dynamic
-            self.combo_profile.setEnabled(True)
-            self.combo_profile.setToolTip("Profile from ~/.config/omm-linux/library/ to flash into Slot 5.")
-            self.lbl_profile_hint.setText("Stages this profile from disk into Slot 5 when this game is focused.")
+            self.edit_profile.setEnabled(True)
+            self.edit_profile.setToolTip("Dedicated profile JSON in ~/.config/omm-linux/library/ staged into Slot 5.")
+            if self.is_new:
+                self.lbl_profile_hint.setText("A dedicated, new profile JSON will be created in your library for this rule.")
+            else:
+                self.lbl_profile_hint.setText("Stages this profile from disk into Slot 5 when this game is focused.")
 
     def _on_capture_window(self):
         self.btn_capture.setEnabled(False)
@@ -179,36 +173,25 @@ class RuleEditDialog(QtWidgets.QDialog):
         self.btn_capture.setEnabled(True)
         self.btn_capture.setText("Capture Window")
 
+    def _on_profile_edited_by_user(self):
+        self._custom_profile_edited = True
+
     def _on_name_changed(self, text: str):
         t = text.strip()
-        if t and not self._custom_profile_selected:
-            self.combo_profile.setEditText(f"{t}.json")
-
-    def _on_profile_combo_changed(self, index: int):
-        self._custom_profile_selected = True
-
-    def _on_prompt_new_profile(self):
-        default_name = f"{self.edit_name.text().strip() or 'App'}.json"
-        name, ok = QtWidgets.QInputDialog.getText(
-            self, "New Library Profile", "Enter profile filename (.json):",
-            text=default_name
-        )
-        if ok and name.strip():
-            n = name.strip()
-            if not n.endswith(".json"):
-                n += ".json"
-            if not (self.mgr.library_dir / n).exists():
-                prof_dict = self.mgr.create_default_profile_dict(n)
-                self.mgr.save_profile_to_library(n, prof_dict)
-            self.combo_profile.setEditText(n)
-            self._custom_profile_selected = True
+        if self.is_new and not self._custom_profile_edited:
+            clean = re.sub(r'[\\/*?:"<>|]', "", t).strip()
+            self.edit_profile.setText(f"{clean or 'New Profile'}.json")
 
     def get_rule(self) -> GameRule:
-        prof_name = self.combo_profile.currentText().strip()
-        if prof_name and not prof_name.endswith(".json"):
+        name = self.edit_name.text().strip() or "Unnamed Game"
+        prof_name = self.edit_profile.text().strip()
+        if not prof_name:
+            clean = re.sub(r'[\\/*?:"<>|]', "", name).strip()
+            prof_name = f"{clean or 'New Profile'}.json"
+        if not prof_name.endswith(".json"):
             prof_name += ".json"
         return GameRule(
-            name=self.edit_name.text().strip() or "Unnamed Game",
+            name=name,
             pattern=self.edit_pattern.text().strip(),
             target_slot=self.combo_slot.currentData(),
             profile_name=prof_name,
@@ -568,17 +551,35 @@ class GamesTab(QtWidgets.QWidget):
             btn_add.clicked.connect(lambda _, game=g: self._on_add_rule_from_game(game))
             self.table_scanned.setCellWidget(row, 3, btn_add)
 
+    def _create_and_save_rule_profile(self, rule: GameRule, is_new: bool = True) -> GameRule:
+        """Ensures that for Slot 5, a dedicated, new profile JSON is created on disk and never reuses other profiles."""
+        if rule.target_slot == 5:
+            if is_new:
+                unique_filename = self.mgr.get_unique_profile_filename(rule.profile_name or rule.name)
+            else:
+                unique_filename = rule.profile_name or f"{rule.name}.json"
+                if not unique_filename.endswith(".json"):
+                    unique_filename += ".json"
+
+            rule.profile_name = unique_filename
+            if not (self.mgr.library_dir / unique_filename).exists():
+                p_dict = self.mgr.create_default_profile_dict(unique_filename)
+                self.mgr.save_profile_to_library(unique_filename, p_dict)
+        return rule
+
     def _on_add_rule_from_game(self, game: ScannedGame):
-        profiles = self.mgr.list_profiles()
+        unique_prof = self.mgr.get_unique_profile_filename(game.title)
         rule = GameRule(
             name=game.title,
             pattern=game.window_class_hint or game.title.lower(),
             target_slot=5,
-            profile_name=profiles[0] if profiles else f"{game.title}.json"
+            profile_name=unique_prof,
+            enabled=True,
         )
-        dlg = RuleEditDialog(self, rule=rule, available_profiles=profiles)
+        dlg = RuleEditDialog(self, mgr=self.mgr, rule=rule, is_new=True)
         if dlg.exec():
             new_rule = dlg.get_rule()
+            new_rule = self._create_and_save_rule_profile(new_rule, is_new=True)
             rules = self.mgr.get_rules()
             rules.append(new_rule)
             self.mgr.save_rules(rules)
@@ -586,10 +587,10 @@ class GamesTab(QtWidgets.QWidget):
             self.watcher.reload()
 
     def _on_add_rule(self):
-        profiles = self.mgr.list_profiles()
-        dlg = RuleEditDialog(self, available_profiles=profiles)
+        dlg = RuleEditDialog(self, mgr=self.mgr, is_new=True)
         if dlg.exec():
             new_rule = dlg.get_rule()
+            new_rule = self._create_and_save_rule_profile(new_rule, is_new=True)
             rules = self.mgr.get_rules()
             rules.append(new_rule)
             self.mgr.save_rules(rules)
@@ -597,10 +598,11 @@ class GamesTab(QtWidgets.QWidget):
             self.watcher.reload()
 
     def _on_capture_quick(self):
-        dlg = RuleEditDialog(self, available_profiles=self.mgr.list_profiles())
+        dlg = RuleEditDialog(self, mgr=self.mgr, is_new=True)
         dlg._on_capture_window()
         if dlg.exec():
             new_rule = dlg.get_rule()
+            new_rule = self._create_and_save_rule_profile(new_rule, is_new=True)
             rules = self.mgr.get_rules()
             rules.append(new_rule)
             self.mgr.save_rules(rules)
@@ -676,9 +678,11 @@ class GamesTab(QtWidgets.QWidget):
         row = self.table_rules.currentRow()
         rules = self.mgr.get_rules()
         if 0 <= row < len(rules):
-            dlg = RuleEditDialog(self, rule=rules[row], available_profiles=self.mgr.list_profiles())
+            dlg = RuleEditDialog(self, mgr=self.mgr, rule=rules[row], is_new=False)
             if dlg.exec():
-                rules[row] = dlg.get_rule()
+                updated_rule = dlg.get_rule()
+                updated_rule = self._create_and_save_rule_profile(updated_rule, is_new=False)
+                rules[row] = updated_rule
                 self.mgr.save_rules(rules)
                 self._populate_rules()
                 self.watcher.reload()

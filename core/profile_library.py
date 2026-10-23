@@ -119,3 +119,19 @@ class ProfileLibraryManager:
             "gbuttons": list(buttons),
         }
 
+    def get_unique_profile_filename(self, name: str) -> str:
+        """Returns a sanitized, guaranteed unique JSON filename in the library directory."""
+        import re
+        clean = re.sub(r'[\\/*?:"<>|]', "", name).strip()
+        if clean.endswith(".json"):
+            clean = clean[:-5].strip()
+        if not clean:
+            clean = "New Game"
+        candidate = f"{clean}.json"
+        if not (self.library_dir / candidate).exists():
+            return candidate
+        counter = 2
+        while (self.library_dir / f"{clean} ({counter}).json").exists():
+            counter += 1
+        return f"{clean} ({counter}).json"
+
