@@ -31,7 +31,11 @@ class BackgroundServiceManager:
         service_path = BackgroundServiceManager.get_service_file_path()
         service_path.parent.mkdir(parents=True, exist_ok=True)
 
-        appimage_path = "%h/Applications/OMM Linux"
+        appimage = Path.home() / "Applications" / "OMM Linux"
+        if appimage.is_file() and os.access(appimage, os.X_OK):
+            exec_start = '"%h/Applications/OMM Linux" --daemon'
+        else:
+            exec_start = '"%h/.local/bin/omm-linux" --daemon'
 
         unit_content = f"""[Unit]
 Description=OMM Linux Profile Auto-Switching Watcher
@@ -39,7 +43,7 @@ After=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart="{appimage_path}" --daemon
+ExecStart={exec_start}
 Restart=always
 RestartSec=3
 

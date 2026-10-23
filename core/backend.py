@@ -13,18 +13,22 @@ from .models import ButtonAction, Profile, OnboardConfig
 from .keycodes import HID_KEYCODES
 from .native_hidpp import NativeHIDPP
 
-KNOWN_MACROS = {
-    0: "Ctrl + R",
-    22: "Ctrl + PageUp",
-    44: "Ctrl + PageDown",
-    66: "Ctrl + R",
-    88: "Ctrl + PageUp",
-    110: "Ctrl + PageDown",
-    132: "Ctrl + X",
-    154: "Shift + /",
-    176: "Ctrl + X",
-    198: "Shift + /",
-}
+KNOWN_MACROS = {}
+
+# Standard G502 factory raw hardware chunks for buttons 0..10
+FACTORY_RAW_CHUNKS = [
+    bytes([0x80, 0x01, 0x00, 0x01]),  # Chunk 0: Left Click (B1)
+    bytes([0x80, 0x01, 0x00, 0x02]),  # Chunk 1: Right Click (B2)
+    bytes([0x80, 0x01, 0x00, 0x04]),  # Chunk 2: Middle Click (B3)
+    bytes([0x80, 0x01, 0x00, 0x08]),  # Chunk 3: Back (B4)
+    bytes([0x90, 0x47, 0xFF, 0x00]),  # Chunk 4: DPI Shift (B6)
+    bytes([0x80, 0x01, 0x00, 0x10]),  # Chunk 5: Forward (B5)
+    bytes([0x90, 0x46, 0xFF, 0x00]),  # Chunk 6: DPI Down (B7)
+    bytes([0x90, 0x45, 0xFF, 0x00]),  # Chunk 7: DPI Up (B8)
+    bytes([0x90, 0x4A, 0xFF, 0x00]),  # Chunk 8: Tilt Left (B9)
+    bytes([0x90, 0x4B, 0xFF, 0x00]),  # Chunk 9: Tilt Right (B10)
+    bytes([0x90, 0x49, 0xFF, 0x00]),  # Chunk 10: Cycle Profile (B11)
+]
 
 def decode_logitech_macro(bytes_chunk: bytes) -> str:
     i = 0
@@ -429,9 +433,14 @@ class MouseBackend:
                 active_profile_id=active_id,
             )
 
-            def decode_btn(chunk):
+            def decode_btn(chunk: bytes, chunk_idx: int = 0):
                 if chunk == b"\xff\xff\xff\xff":
                     return ButtonAction(behavior=15, action_type=4, value=0)
+                if chunk == b"\x00\x00\x00\x00":
+                    if chunk_idx < len(FACTORY_RAW_CHUNKS):
+                        chunk = FACTORY_RAW_CHUNKS[chunk_idx]
+                    else:
+                        return ButtonAction.mouse_click(1)
                 beh = chunk[0]
                 if beh == 0x80:
                     return ButtonAction(behavior=8, action_type=chunk[1], modifiers=chunk[2], value=chunk[3])
@@ -457,8 +466,8 @@ class MouseBackend:
                 power_mode = raw[16]
                 angle_snap = raw[17]
 
-                raw_buttons = [decode_btn(raw[32+i*4 : 36+i*4]) for i in range(11)]
-                raw_gbuttons = [decode_btn(raw[96+i*4 : 100+i*4]) for i in range(11)]
+                raw_buttons = [decode_btn(raw[32+i*4 : 36+i*4], i) for i in range(11)]
+                raw_gbuttons = [decode_btn(raw[96+i*4 : 100+i*4], i) for i in range(11)]
                 buttons = self._translate_raw_to_ui_buttons(raw_buttons)
                 gbuttons = self._translate_raw_to_ui_buttons(raw_gbuttons)
 
@@ -609,7 +618,9 @@ class MouseBackend:
                 else:
                     chunk = bytes([btn.behavior & 0xFF, btn.action_type & 0xFF, btn.modifiers & 0xFF, btn.value & 0xFF])
             else:
-                chunk = b"\xff\xff\xff\xff"
+                chunk = FACTORY_RAW_CHUNKS[i] if i < len(FACTORY_RAW_CHUNKS) else b"\xff\xff\xff\xff"
+            if chunk == b"\x00\x00\x00\x00":
+                chunk = FACTORY_RAW_CHUNKS[i] if i < len(FACTORY_RAW_CHUNKS) else bytes([0x80, 0x01, 0x00, 0x01])
             b[32 + i*4 : 36 + i*4] = chunk
         for i in range(11):
             if i < len(raw_gbuttons):
@@ -627,7 +638,9 @@ class MouseBackend:
                 else:
                     chunk = bytes([btn.behavior & 0xFF, btn.action_type & 0xFF, btn.modifiers & 0xFF, btn.value & 0xFF])
             else:
-                chunk = b"\xff\xff\xff\xff"
+                chunk = FACTORY_RAW_CHUNKS[i] if i < len(FACTORY_RAW_CHUNKS) else b"\xff\xff\xff\xff"
+            if chunk == b"\x00\x00\x00\x00":
+                chunk = FACTORY_RAW_CHUNKS[i] if i < len(FACTORY_RAW_CHUNKS) else bytes([0x80, 0x01, 0x00, 0x01])
             b[96 + i*4 : 100 + i*4] = chunk
         raw_name = prof.name.encode("utf-16le")[:48].ljust(48, b"\x00")
         b[160:208] = raw_name
@@ -725,7 +738,9 @@ class MouseBackend:
                     else:
                         chunk = bytes([beh & 0xFF, atype & 0xFF, mods & 0xFF, val & 0xFF])
                 else:
-                    chunk = b"\xff\xff\xff\xff"
+                    chunk = FACTORY_RAW_CHUNKS[i] if i < len(FACTORY_RAW_CHUNKS) else b"\xff\xff\xff\xff"
+                if chunk == b"\x00\x00\x00\x00":
+                    chunk = FACTORY_RAW_CHUNKS[i] if i < len(FACTORY_RAW_CHUNKS) else bytes([0x80, 0x01, 0x00, 0x01])
                 b[32 + i*4 : 36 + i*4] = chunk
 
             gbuttons = self._translate_ui_to_raw_buttons(profile_data.get("gbuttons", []))
@@ -762,7 +777,9 @@ class MouseBackend:
                     else:
                         chunk = bytes([beh & 0xFF, atype & 0xFF, mods & 0xFF, val & 0xFF])
                 else:
-                    chunk = b"\xff\xff\xff\xff"
+                    chunk = FACTORY_RAW_CHUNKS[i] if i < len(FACTORY_RAW_CHUNKS) else b"\xff\xff\xff\xff"
+                if chunk == b"\x00\x00\x00\x00":
+                    chunk = FACTORY_RAW_CHUNKS[i] if i < len(FACTORY_RAW_CHUNKS) else bytes([0x80, 0x01, 0x00, 0x01])
                 b[96 + i*4 : 100 + i*4] = chunk
 
             name = profile_data.get("name", f"Profile {slot_num}")

@@ -50,6 +50,12 @@ if command -v gtk-update-icon-cache >/dev/null 2>&1; then
     gtk-update-icon-cache -f -t "${HOME}/.local/share/icons/hicolor" >/dev/null 2>&1 || true
 fi
 
+# 5. Update background service unit if installed
+if [ -f "${HOME}/.config/systemd/user/omm-linux-watcher.service" ]; then
+    python3 -c "import sys; sys.path.insert(0, '${SCRIPT_DIR}'); from core.service_manager import BackgroundServiceManager; BackgroundServiceManager.ensure_service_installed()" >/dev/null 2>&1 || true
+    systemctl --user daemon-reload >/dev/null 2>&1 || true
+fi
+
 echo "Installation complete!"
 echo "You can launch it anytime by running: omm-linux"
 echo "Or searching for 'OMM Linux' in your application menu."
