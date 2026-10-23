@@ -26,15 +26,17 @@ ln -sf "${BIN_DIR}/omm" "${BIN_DIR}/logitech-onboard-gui"
 # 2. Install SVG icon
 cp "${SCRIPT_DIR}/assets/icon.svg" "${ICON_DIR}/omm.svg"
 cp "${SCRIPT_DIR}/assets/icon.svg" "${ICON_DIR}/omm-linux.svg"
-echo "Installed icon to: ${ICON_DIR}/omm.svg"
-
-# 3. Install .desktop entry (resolve absolute binary path for desktop environment launchers)
-sed -e "s|^Exec=.*|Exec=${BIN_DIR}/omm|" \
-    -e "s|^Icon=.*|Icon=${ICON_DIR}/omm.svg|" \
-    "${SCRIPT_DIR}/assets/omm.desktop" > "${APP_DIR}/omm.desktop"
-if ! grep -q "^Path=" "${APP_DIR}/omm.desktop"; then
-    echo "Path=${SCRIPT_DIR}" >> "${APP_DIR}/omm.desktop"
+# Also install to base icons dir and active KDE theme if present
+cp "${SCRIPT_DIR}/assets/icon.svg" "${HOME}/.local/share/icons/omm.svg" 2>/dev/null || true
+cp "${SCRIPT_DIR}/assets/icon.svg" "${HOME}/.local/share/icons/omm-linux.svg" 2>/dev/null || true
+if [ -d "${HOME}/.local/share/icons/Papirus-Dark-Breeze-actions/scalable/apps" ]; then
+    cp "${SCRIPT_DIR}/assets/icon.svg" "${HOME}/.local/share/icons/Papirus-Dark-Breeze-actions/scalable/apps/omm.svg"
+    cp "${SCRIPT_DIR}/assets/icon.svg" "${HOME}/.local/share/icons/Papirus-Dark-Breeze-actions/scalable/apps/omm-linux.svg"
 fi
+echo "Installed icons."
+
+# 3. Install .desktop entry
+cp "${SCRIPT_DIR}/assets/omm.desktop" "${APP_DIR}/omm.desktop"
 echo "Installed desktop entry to: ${APP_DIR}/omm.desktop"
 
 # 4. Refresh icon and desktop caches if utilities are available
@@ -50,6 +52,9 @@ fi
 
 if command -v gtk-update-icon-cache >/dev/null 2>&1; then
     gtk-update-icon-cache -f -t "${HOME}/.local/share/icons/hicolor" >/dev/null 2>&1 || true
+    if [ -d "${HOME}/.local/share/icons/Papirus-Dark-Breeze-actions" ]; then
+        gtk-update-icon-cache -f -t "${HOME}/.local/share/icons/Papirus-Dark-Breeze-actions" >/dev/null 2>&1 || true
+    fi
 fi
 
 # 5. Update background service unit if installed
