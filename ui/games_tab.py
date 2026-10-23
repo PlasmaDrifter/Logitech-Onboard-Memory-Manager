@@ -337,13 +337,9 @@ class GamesTab(QtWidgets.QWidget):
         self.table_rules.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
         rules_layout.addWidget(self.table_rules)
 
-        # Rules Buttons (2-Row Compact Layout for Column View)
-        r_btns_layout = QtWidgets.QVBoxLayout()
-        r_btns_layout.setSpacing(6)
-
-        # Row 1: Edit Buttons, + Add Rule, Edit Rule, Delete Rule
-        r_btns_row1 = QtWidgets.QHBoxLayout()
-        r_btns_row1.setSpacing(6)
+        # Rules Buttons (Single Row Layout)
+        r_btns_row = QtWidgets.QHBoxLayout()
+        r_btns_row.setSpacing(6)
         self.btn_edit_buttons = QtWidgets.QPushButton("Edit Buttons")
         self.btn_edit_buttons.setToolTip("Customize mouse buttons for the selected game rule")
         self.btn_edit_buttons.clicked.connect(self._on_edit_buttons_for_rule)
@@ -356,24 +352,18 @@ class GamesTab(QtWidgets.QWidget):
         self.btn_delete_rule.setObjectName("secondaryBtn")
         self.btn_delete_rule.clicked.connect(self._on_delete_rule)
 
-        r_btns_row1.addWidget(self.btn_edit_buttons)
-        r_btns_row1.addWidget(self.btn_add_rule)
-        r_btns_row1.addWidget(self.btn_edit_rule)
-        r_btns_row1.addWidget(self.btn_delete_rule)
-        r_btns_row1.addStretch()
+        r_btns_row.addWidget(self.btn_edit_buttons)
+        r_btns_row.addWidget(self.btn_add_rule)
+        r_btns_row.addWidget(self.btn_edit_rule)
+        r_btns_row.addWidget(self.btn_delete_rule)
+        r_btns_row.addStretch()
 
-        # Row 2: Capture Active Window all the way to the right
-        r_btns_row2 = QtWidgets.QHBoxLayout()
         self.btn_capture_rule = QtWidgets.QPushButton("Capture Active Window")
         self.btn_capture_rule.setObjectName("secondaryBtn")
         self.btn_capture_rule.clicked.connect(self._on_capture_quick)
+        r_btns_row.addWidget(self.btn_capture_rule)
 
-        r_btns_row2.addStretch()
-        r_btns_row2.addWidget(self.btn_capture_rule)
-
-        r_btns_layout.addLayout(r_btns_row1)
-        r_btns_layout.addLayout(r_btns_row2)
-        rules_layout.addLayout(r_btns_layout)
+        rules_layout.addLayout(r_btns_row)
 
         # Allow double click to edit buttons directly
         self.table_rules.doubleClicked.connect(self._on_edit_buttons_for_rule)
