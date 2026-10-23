@@ -100,3 +100,22 @@ class ProfileLibraryManager:
             except Exception as e:
                 logger.error(f"Failed to load profile {filename}: {e}")
         return None
+
+    @staticmethod
+    def create_default_profile_dict(name: str = "New Profile") -> Dict[str, Any]:
+        """Creates a fresh profile dictionary with Left Click, Right Click, Middle Click,
+        and Scroll Wheel (Tilt Left / Tilt Right) working, and all other buttons blank (disabled)."""
+        from .models import create_default_buttons
+        clean_name = name[:-5] if name.endswith(".json") else name
+        buttons = [b.to_dict() for b in create_default_buttons()]
+        return {
+            "name": clean_name,
+            "enabled": 1,
+            "report_rate": 1000,
+            "resolutions": [800, 1200, 1600, 2400, 3200],
+            "resolution_default_index": 1,
+            "resolution_shift_index": 0,
+            "buttons": buttons,
+            "gbuttons": list(buttons),
+        }
+

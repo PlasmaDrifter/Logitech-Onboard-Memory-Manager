@@ -115,6 +115,30 @@ class ButtonAction:
         )
 
 
+def create_default_buttons() -> List[ButtonAction]:
+    """Returns standard default button mappings for new profiles:
+    - Button 1: Left Click
+    - Button 2: Right Click
+    - Button 3: Middle Click
+    - Button 9: Scroll Wheel Tilt Left
+    - Button 10: Scroll Wheel Tilt Right
+    All other buttons disabled (blank).
+    """
+    return [
+        ButtonAction.mouse_click(1),  # B1: Left Click
+        ButtonAction.mouse_click(2),  # B2: Right Click
+        ButtonAction.mouse_click(4),  # B3: Middle Click
+        ButtonAction.disabled(),      # B4: Blank
+        ButtonAction.disabled(),      # B5: Blank
+        ButtonAction.disabled(),      # B6: Blank
+        ButtonAction.disabled(),      # B7: Blank
+        ButtonAction.disabled(),      # B8: Blank
+        ButtonAction.function(0x4A),  # B9: Scroll Wheel Tilt Left
+        ButtonAction.function(0x4B),  # B10: Scroll Wheel Tilt Right
+        ButtonAction.disabled(),      # B11: Blank
+    ]
+
+
 @dataclass
 class Profile:
     profile_id: int
@@ -125,8 +149,8 @@ class Profile:
     resolutions: List[int] = field(default_factory=lambda: [800, 1200, 1600, 2400, 3200])
     resolution_default_index: int = 0
     resolution_shift_index: int = 0
-    buttons: List[ButtonAction] = field(default_factory=list)
-    gbuttons: List[ButtonAction] = field(default_factory=list)
+    buttons: List[ButtonAction] = field(default_factory=create_default_buttons)
+    gbuttons: List[ButtonAction] = field(default_factory=create_default_buttons)
     angle_snap: int = 0
     red: int = 255
     green: int = 255

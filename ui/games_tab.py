@@ -197,6 +197,9 @@ class RuleEditDialog(QtWidgets.QDialog):
             n = name.strip()
             if not n.endswith(".json"):
                 n += ".json"
+            if not (self.mgr.library_dir / n).exists():
+                prof_dict = self.mgr.create_default_profile_dict(n)
+                self.mgr.save_profile_to_library(n, prof_dict)
             self.combo_profile.setEditText(n)
             self._custom_profile_selected = True
 
@@ -634,10 +637,15 @@ class GamesTab(QtWidgets.QWidget):
                     from core.models import ButtonAction
                     p5.gbuttons = [ButtonAction.from_dict(b) if isinstance(b, dict) else b for b in profile_data["gbuttons"]]
         else:
-            # If no library file exists yet for this game, initialize it using current Slot 5
+            # If no library file exists yet for this game, initialize it with fresh default buttons
+            profile_data = self.mgr.create_default_profile_dict(rule.profile_name or rule.name)
+            self.mgr.save_profile_to_library(rule.profile_name or rule.name, profile_data)
             p5 = main_win.config.profiles.get(5)
             if p5:
                 p5.name = rule.name
+                from core.models import create_default_buttons
+                p5.buttons = create_default_buttons()
+                p5.gbuttons = create_default_buttons()
 
         # Switch to Profile 5 tab
         slot5_idx = 4

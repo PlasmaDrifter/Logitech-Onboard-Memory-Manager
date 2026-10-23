@@ -15,19 +15,19 @@ from .native_hidpp import NativeHIDPP
 
 KNOWN_MACROS = {}
 
-# Standard G502 factory raw hardware chunks for buttons 0..10
+# Standard factory raw hardware chunks for new profiles (Left, Right, Middle, Wheel Tilt active; others blank)
 FACTORY_RAW_CHUNKS = [
     bytes([0x80, 0x01, 0x00, 0x01]),  # Chunk 0: Left Click (B1)
     bytes([0x80, 0x01, 0x00, 0x02]),  # Chunk 1: Right Click (B2)
     bytes([0x80, 0x01, 0x00, 0x04]),  # Chunk 2: Middle Click (B3)
-    bytes([0x80, 0x01, 0x00, 0x08]),  # Chunk 3: Back (B4)
-    bytes([0x90, 0x47, 0xFF, 0x00]),  # Chunk 4: DPI Shift (B6)
-    bytes([0x80, 0x01, 0x00, 0x10]),  # Chunk 5: Forward (B5)
-    bytes([0x90, 0x46, 0xFF, 0x00]),  # Chunk 6: DPI Down (B7)
-    bytes([0x90, 0x45, 0xFF, 0x00]),  # Chunk 7: DPI Up (B8)
-    bytes([0x90, 0x4A, 0xFF, 0x00]),  # Chunk 8: Tilt Left (B9)
-    bytes([0x90, 0x4B, 0xFF, 0x00]),  # Chunk 9: Tilt Right (B10)
-    bytes([0x90, 0x49, 0xFF, 0x00]),  # Chunk 10: Cycle Profile (B11)
+    b"\xff\xff\xff\xff",              # Chunk 3: Blank (B4)
+    b"\xff\xff\xff\xff",              # Chunk 4: Blank (B6)
+    b"\xff\xff\xff\xff",              # Chunk 5: Blank (B5)
+    b"\xff\xff\xff\xff",              # Chunk 6: Blank (B7)
+    b"\xff\xff\xff\xff",              # Chunk 7: Blank (B8)
+    bytes([0x90, 0x4A, 0xFF, 0x00]),  # Chunk 8: Scroll Wheel Tilt Left (B9)
+    bytes([0x90, 0x4B, 0xFF, 0x00]),  # Chunk 9: Scroll Wheel Tilt Right (B10)
+    b"\xff\xff\xff\xff",              # Chunk 10: Blank (B11)
 ]
 
 def decode_logitech_macro(bytes_chunk: bytes) -> str:
@@ -434,13 +434,13 @@ class MouseBackend:
             )
 
             def decode_btn(chunk: bytes, chunk_idx: int = 0):
-                if chunk == b"\xff\xff\xff\xff":
-                    return ButtonAction(behavior=15, action_type=4, value=0)
                 if chunk == b"\x00\x00\x00\x00":
                     if chunk_idx < len(FACTORY_RAW_CHUNKS):
                         chunk = FACTORY_RAW_CHUNKS[chunk_idx]
                     else:
-                        return ButtonAction.mouse_click(1)
+                        chunk = b"\xff\xff\xff\xff"
+                if chunk == b"\xff\xff\xff\xff":
+                    return ButtonAction(behavior=15, action_type=4, value=0)
                 beh = chunk[0]
                 if beh == 0x80:
                     return ButtonAction(behavior=8, action_type=chunk[1], modifiers=chunk[2], value=chunk[3])

@@ -49,6 +49,12 @@ FUNCTION_ACTIONS = {
     0x0E: "Mode Switch",
     0x10: "Scroll Down",
     0x11: "Scroll Up",
+    0x45: "Next DPI",
+    0x46: "Previous DPI",
+    0x47: "DPI Shift (Sniper)",
+    0x49: "Cycle Profile",
+    0x4A: "Tilt Left",
+    0x4B: "Tilt Right",
 }
 
 FUNCTION_NAMES_INV = {v: k for k, v in FUNCTION_ACTIONS.items()}
