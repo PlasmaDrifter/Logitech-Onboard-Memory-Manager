@@ -632,11 +632,8 @@ class GamesTab(QtWidgets.QWidget):
         for row, item in enumerate(items):
             self.table_scanned.insertRow(row)
             
-            # Column 0: Launcher / Type / Category
-            type_label = f"{item.launcher}"
-            if item.item_type == "app" and item.category and item.category != "Application":
-                type_label = f"{item.launcher} • {item.category}"
-            self.table_scanned.setItem(row, 0, QtWidgets.QTableWidgetItem(type_label))
+            # Column 0: Launcher / Type
+            self.table_scanned.setItem(row, 0, QtWidgets.QTableWidgetItem(item.launcher))
             
             # Column 1: Title / Name
             self.table_scanned.setItem(row, 1, QtWidgets.QTableWidgetItem(item.title))

@@ -153,19 +153,35 @@ class GameScanner:
                         continue
                     seen_keys.add(key)
 
-                    # Determine source launcher
-                    f_str = str(desktop_file)
-                    if "flatpak" in f_str:
-                        source = "Flatpak"
-                    elif "snap" in f_str:
-                        source = "Snap"
-                    elif str(home) in f_str:
-                        source = "User App"
-                    else:
-                        source = "System"
-
                     category = GameScanner._categorize(cats)
                     is_game = category == "Game" or "game" in cats.lower()
+
+                    # Determine source launcher / package type
+                    f_str = str(desktop_file)
+                    txt_low = txt.lower()
+                    exec_low = exec_val.lower()
+
+                    if is_game:
+                        if "flatpak" in f_str:
+                            source = "Flatpak"
+                        elif "snap" in f_str:
+                            source = "Snap"
+                        elif str(home) in f_str:
+                            source = "User App"
+                        else:
+                            source = "System"
+                    else:
+                        # Desktop Applications: Repo, Flatpak, AppImage, User, Snap
+                        if "x-appimage" in txt_low or ".appimage" in txt_low or "/applications/" in exec_low:
+                            source = "AppImage"
+                        elif "flatpak" in f_str or "flatpak run" in exec_low:
+                            source = "Flatpak"
+                        elif "snap" in f_str:
+                            source = "Snap"
+                        elif str(home) in f_str:
+                            source = "User"
+                        else:
+                            source = "Repo"
 
                     item = ScannedApp(
                         title=name,
