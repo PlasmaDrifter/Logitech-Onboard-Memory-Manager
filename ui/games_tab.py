@@ -284,34 +284,48 @@ class GamesTab(QtWidgets.QWidget):
         svc_layout.addStretch()
         layout.addWidget(svc_box)
 
-        # Splitter: Rules Table on Top/Left, Scanned Installed Games on Bottom/Right
-        splitter = QtWidgets.QSplitter(QtCore.Qt.Orientation.Vertical)
+        # Splitter: Rules Table on Left, Scanned Installed Games on Right
+        splitter = QtWidgets.QSplitter(QtCore.Qt.Orientation.Horizontal)
 
-        # 1. Rules Group
+        # 1. Rules Group (Left Column)
         rules_box = QtWidgets.QGroupBox("Game Auto-Switching Rules")
         rules_layout = QtWidgets.QVBoxLayout(rules_box)
+        rules_layout.setContentsMargins(10, 12, 10, 10)
+        rules_layout.setSpacing(8)
 
         # Table
         self.table_rules = QtWidgets.QTableWidget(0, 5)
-        self.table_rules.setHorizontalHeaderLabels(["Active", "Game Name", "Match Pattern", "Assigned Slot", "Library Profile"])
+        self.table_rules.setHorizontalHeaderLabels(["Active", "Game Name", "Match Pattern", "Slot", "Library Profile"])
         self.table_rules.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
-        self.table_rules.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
-        self.table_rules.horizontalHeader().setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
+        self.table_rules.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.Interactive)
+        self.table_rules.setColumnWidth(1, 140)
+        self.table_rules.horizontalHeader().setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeMode.Interactive)
+        self.table_rules.setColumnWidth(2, 110)
         self.table_rules.horizontalHeader().setSectionResizeMode(3, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
         self.table_rules.horizontalHeader().setSectionResizeMode(4, QtWidgets.QHeaderView.ResizeMode.Stretch)
         self.table_rules.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
         rules_layout.addWidget(self.table_rules)
 
-        # Rules Buttons
-        r_btns = QtWidgets.QHBoxLayout()
-        self.btn_add_rule = QtWidgets.QPushButton("+ Add Rule Manually")
+        # Rules Buttons (2-Row Compact Layout for Column View)
+        r_btns_layout = QtWidgets.QVBoxLayout()
+        r_btns_layout.setSpacing(6)
+
+        r_btns_row1 = QtWidgets.QHBoxLayout()
+        self.btn_edit_buttons = QtWidgets.QPushButton("Edit Buttons")
+        self.btn_edit_buttons.setToolTip("Customize mouse buttons for the selected game rule")
+        self.btn_edit_buttons.clicked.connect(self._on_edit_buttons_for_rule)
+        self.btn_add_rule = QtWidgets.QPushButton("+ Add Rule")
         self.btn_add_rule.clicked.connect(self._on_add_rule)
         self.btn_capture_rule = QtWidgets.QPushButton("Capture Active Window")
         self.btn_capture_rule.setObjectName("secondaryBtn")
         self.btn_capture_rule.clicked.connect(self._on_capture_quick)
-        self.btn_edit_buttons = QtWidgets.QPushButton("Edit Buttons")
-        self.btn_edit_buttons.setToolTip("Customize mouse buttons for the selected game rule")
-        self.btn_edit_buttons.clicked.connect(self._on_edit_buttons_for_rule)
+
+        r_btns_row1.addWidget(self.btn_edit_buttons)
+        r_btns_row1.addWidget(self.btn_add_rule)
+        r_btns_row1.addWidget(self.btn_capture_rule)
+        r_btns_row1.addStretch()
+
+        r_btns_row2 = QtWidgets.QHBoxLayout()
         self.btn_edit_rule = QtWidgets.QPushButton("Edit Rule")
         self.btn_edit_rule.setObjectName("secondaryBtn")
         self.btn_edit_rule.clicked.connect(self._on_edit_rule)
@@ -319,22 +333,24 @@ class GamesTab(QtWidgets.QWidget):
         self.btn_delete_rule.setObjectName("secondaryBtn")
         self.btn_delete_rule.clicked.connect(self._on_delete_rule)
 
-        r_btns.addWidget(self.btn_edit_buttons)
-        r_btns.addWidget(self.btn_add_rule)
-        r_btns.addWidget(self.btn_capture_rule)
-        r_btns.addWidget(self.btn_edit_rule)
-        r_btns.addWidget(self.btn_delete_rule)
-        r_btns.addStretch()
-        rules_layout.addLayout(r_btns)
+        r_btns_row2.addWidget(self.btn_edit_rule)
+        r_btns_row2.addWidget(self.btn_delete_rule)
+        r_btns_row2.addStretch()
+
+        r_btns_layout.addLayout(r_btns_row1)
+        r_btns_layout.addLayout(r_btns_row2)
+        rules_layout.addLayout(r_btns_layout)
 
         # Allow double click to edit buttons directly
         self.table_rules.doubleClicked.connect(self._on_edit_buttons_for_rule)
 
         splitter.addWidget(rules_box)
 
-        # 2. Installed Games Scanner Group
+        # 2. Installed Games Scanner Group (Right Column)
         scanner_box = QtWidgets.QGroupBox("Installed Games (Steam / Lutris / Heroic / Epic / GOG)")
         scanner_layout = QtWidgets.QVBoxLayout(scanner_box)
+        scanner_layout.setContentsMargins(10, 12, 10, 10)
+        scanner_layout.setSpacing(8)
 
         filter_row = QtWidgets.QHBoxLayout()
         self.edit_search_games = QtWidgets.QLineEdit()
@@ -353,14 +369,21 @@ class GamesTab(QtWidgets.QWidget):
         self.table_scanned = QtWidgets.QTableWidget(0, 4)
         self.table_scanned.setHorizontalHeaderLabels(["Launcher", "Game Title", "App ID / Hint", "Action"])
         self.table_scanned.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
-        self.table_scanned.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
-        self.table_scanned.horizontalHeader().setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeMode.Stretch)
+        self.table_scanned.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.Stretch)
+        self.table_scanned.horizontalHeader().setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeMode.Interactive)
+        self.table_scanned.setColumnWidth(2, 110)
         self.table_scanned.horizontalHeader().setSectionResizeMode(3, QtWidgets.QHeaderView.ResizeMode.Fixed)
-        self.table_scanned.setColumnWidth(3, 110)
+        self.table_scanned.setColumnWidth(3, 100)
         self.table_scanned.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
         scanner_layout.addWidget(self.table_scanned)
 
         splitter.addWidget(scanner_box)
+
+        # Set initial balanced column proportions
+        splitter.setStretchFactor(0, 1)
+        splitter.setStretchFactor(1, 1)
+        splitter.setSizes([580, 560])
+
         layout.addWidget(splitter)
 
         # Connect watcher callback
