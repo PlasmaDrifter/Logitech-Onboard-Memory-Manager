@@ -153,11 +153,13 @@ class MouseBackend:
 
             profiles_yaml = {}
             for pid, prof in config.profiles.items():
+                raw_b = MouseBackend._translate_ui_to_raw_buttons(prof.buttons)
+                raw_gb = MouseBackend._translate_ui_to_raw_buttons(prof.gbuttons)
                 p_yaml = OnboardProfileYaml(
                     angle_snap=getattr(prof, "angle_snap", 0),
                     blue=getattr(prof, "blue", 255),
-                    buttons=[ButtonYaml(**b.to_yaml_dict()) for b in prof.buttons],
-                    gbuttons=[ButtonYaml(**b.to_yaml_dict()) for b in prof.gbuttons],
+                    buttons=[ButtonYaml(**b.to_yaml_dict()) for b in raw_b],
+                    gbuttons=[ButtonYaml(**b.to_yaml_dict()) for b in raw_gb],
                     enabled=getattr(prof, "enabled", 1),
                     green=getattr(prof, "green", 255),
                     name=getattr(prof, "name", f"Profile {pid}"),
@@ -191,11 +193,28 @@ class MouseBackend:
 
     @staticmethod
     def _translate_raw_to_ui_buttons(raw_btns: list) -> list:
-        return list(raw_btns)
+        """Translates raw G502 hardware memory chunk order to logical UI button order.
+        In G502 hardware flash:
+          chunk 3 = G4 (Back)
+          chunk 4 = G6 (DPI Shift / Sniper)
+          chunk 5 = G5 (Forward)
+        In the UI / logical button numbering:
+          button 4 (idx 3) = G4 (Thumb Back)
+          button 5 (idx 4) = G5 (Thumb Forward)
+          button 6 (idx 5) = G6 (Thumb DPI Shift / Sniper)
+        """
+        btns = list(raw_btns)
+        if len(btns) >= 6:
+            btns[4], btns[5] = btns[5], btns[4]
+        return btns
 
     @staticmethod
     def _translate_ui_to_raw_buttons(ui_btns: list) -> list:
-        return list(ui_btns)
+        """Translates logical UI button order to raw G502 hardware memory chunk order."""
+        btns = list(ui_btns)
+        if len(btns) >= 6:
+            btns[4], btns[5] = btns[5], btns[4]
+        return btns
 
     def _get_solaar_cmd(self) -> list:
         """Determines whether Solaar is native or in Flatpak."""
