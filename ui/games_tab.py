@@ -225,22 +225,39 @@ class GamesTab(QtWidgets.QWidget):
 
     def _init_ui(self):
         layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(10)
+        layout.setContentsMargins(10, 8, 10, 10)
+        layout.setSpacing(8)
 
-        # Top Control Bar: Master Auto-Switching Toggle & Default Profile
+        # Compact Unified Header Panel
+        header_card = QtWidgets.QFrame()
+        header_card.setObjectName("gamesHeaderCard")
+        header_card.setStyleSheet("""
+            #gamesHeaderCard {
+                background-color: #1a1e28;
+                border: 1px solid #2e3440;
+                border-radius: 6px;
+            }
+        """)
+        header_card.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
+        card_layout = QtWidgets.QVBoxLayout(header_card)
+        card_layout.setContentsMargins(12, 8, 12, 8)
+        card_layout.setSpacing(6)
+
+        # Row 1: Profile Auto-Switching Controls & Active Status
         top_bar = QtWidgets.QHBoxLayout()
-        
+        top_bar.setSpacing(12)
+
         self.chk_enable_autoswitch = QtWidgets.QCheckBox("Enable Automatic Profile Switching (Game Lock Active)")
         self.chk_enable_autoswitch.setStyleSheet("font-weight: bold; font-size: 13px; color: #38bdf8;")
         self.chk_enable_autoswitch.toggled.connect(self._on_toggle_autoswitch)
         top_bar.addWidget(self.chk_enable_autoswitch)
 
-        top_bar.addSpacing(20)
+        top_bar.addSpacing(10)
 
         lbl_def = QtWidgets.QLabel("Default Desktop Slot (Alt-Tab):")
-        lbl_def.setStyleSheet("color: #9ca3af;")
+        lbl_def.setStyleSheet("color: #9ca3af; font-size: 12px;")
         self.combo_default_slot = QtWidgets.QComboBox()
+        self.combo_default_slot.setFixedHeight(26)
         self.combo_default_slot.addItem("Slot 1 (Recommended)", 1)
         self.combo_default_slot.addItem("Slot 2", 2)
         self.combo_default_slot.addItem("Slot 3", 3)
@@ -252,37 +269,46 @@ class GamesTab(QtWidgets.QWidget):
         top_bar.addStretch()
 
         self.lbl_status = QtWidgets.QLabel("Active: Slot 1 (Desktop)")
-        self.lbl_status.setStyleSheet("color: #4ade80; font-weight: bold; padding: 4px 8px; background: #1f2937; border-radius: 4px;")
+        self.lbl_status.setFixedHeight(26)
+        self.lbl_status.setStyleSheet("color: #4ade80; font-weight: bold; font-size: 12px; padding: 2px 10px; background: #131720; border: 1px solid #1f2937; border-radius: 4px;")
         top_bar.addWidget(self.lbl_status)
+        card_layout.addLayout(top_bar)
 
-        layout.addLayout(top_bar)
+        # Row 2: Background Service Status & Controls
+        svc_layout = QtWidgets.QHBoxLayout()
+        svc_layout.setSpacing(8)
 
-        # Background Service Control Panel
-        svc_box = QtWidgets.QGroupBox("Background Service (Runs even when this app is closed)")
-        svc_layout = QtWidgets.QHBoxLayout(svc_box)
-        svc_layout.setContentsMargins(12, 10, 12, 10)
+        lbl_svc_title = QtWidgets.QLabel("Background Daemon:")
+        lbl_svc_title.setStyleSheet("color: #9ca3af; font-size: 12px; font-weight: bold;")
+        svc_layout.addWidget(lbl_svc_title)
 
         self.lbl_svc_indicator = QtWidgets.QLabel("● Stopped")
-        self.lbl_svc_indicator.setStyleSheet("color: #ef4444; font-weight: bold; font-size: 13px; padding: 2px 6px; background: #18181c; border-radius: 4px;")
+        self.lbl_svc_indicator.setFixedHeight(24)
+        self.lbl_svc_indicator.setStyleSheet("color: #ef4444; font-weight: bold; font-size: 12px; padding: 2px 8px; background: #231215; border: 1px solid #451a1a; border-radius: 4px;")
         svc_layout.addWidget(self.lbl_svc_indicator)
 
         self.btn_svc_start = QtWidgets.QPushButton("Start Service")
+        self.btn_svc_start.setFixedHeight(26)
         self.btn_svc_start.clicked.connect(self._on_start_service)
         svc_layout.addWidget(self.btn_svc_start)
 
         self.btn_svc_stop = QtWidgets.QPushButton("Stop Service")
+        self.btn_svc_stop.setFixedHeight(26)
         self.btn_svc_stop.setObjectName("secondaryBtn")
         self.btn_svc_stop.clicked.connect(self._on_stop_service)
         svc_layout.addWidget(self.btn_svc_stop)
 
-        svc_layout.addSpacing(15)
+        svc_layout.addSpacing(14)
 
         self.chk_svc_autostart = QtWidgets.QCheckBox("Automatically start service on boot / login")
+        self.chk_svc_autostart.setStyleSheet("font-size: 12px; color: #cbd5e1;")
         self.chk_svc_autostart.toggled.connect(self._on_toggle_svc_autostart)
         svc_layout.addWidget(self.chk_svc_autostart)
 
         svc_layout.addStretch()
-        layout.addWidget(svc_box)
+        card_layout.addLayout(svc_layout)
+
+        layout.addWidget(header_card)
 
         # Splitter: Rules Table on Left, Scanned Installed Games on Right
         splitter = QtWidgets.QSplitter(QtCore.Qt.Orientation.Horizontal)
@@ -384,7 +410,7 @@ class GamesTab(QtWidgets.QWidget):
         splitter.setStretchFactor(1, 1)
         splitter.setSizes([580, 560])
 
-        layout.addWidget(splitter)
+        layout.addWidget(splitter, stretch=1)
 
         # Connect watcher callback
         self.watcher.on_profile_switched = self._on_profile_switched_callback
@@ -417,12 +443,12 @@ class GamesTab(QtWidgets.QWidget):
 
         if running:
             self.lbl_svc_indicator.setText("● Running in Background")
-            self.lbl_svc_indicator.setStyleSheet("color: #4ade80; font-weight: bold; font-size: 13px; padding: 2px 6px; background: #14532d; border-radius: 4px;")
+            self.lbl_svc_indicator.setStyleSheet("color: #4ade80; font-weight: bold; font-size: 12px; padding: 2px 8px; background: #14532d; border-radius: 4px;")
             self.btn_svc_start.setEnabled(False)
             self.btn_svc_stop.setEnabled(True)
         else:
             self.lbl_svc_indicator.setText("● Stopped")
-            self.lbl_svc_indicator.setStyleSheet("color: #ef4444; font-weight: bold; font-size: 13px; padding: 2px 6px; background: #450a0a; border-radius: 4px;")
+            self.lbl_svc_indicator.setStyleSheet("color: #ef4444; font-weight: bold; font-size: 12px; padding: 2px 8px; background: #450a0a; border-radius: 4px;")
             self.btn_svc_start.setEnabled(True)
             self.btn_svc_stop.setEnabled(False)
 
