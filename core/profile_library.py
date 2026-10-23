@@ -20,7 +20,7 @@ class GameRule:
 @dataclass
 class WatcherSettings:
     enabled: bool = True
-    poll_interval_ms: int = 250
+    poll_interval_ms: int = 1000
     default_slot: int = 1               # Default desktop / alt-tab slot (1-4)
     staged_slot5_profile: str = ""      # Last profile flashed into slot 5
 
