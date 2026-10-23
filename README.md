@@ -19,8 +19,6 @@ No Windows installation or Logitech G HUB required.
 ## Features
 
 - **Direct Hardware Onboard Memory Access**: Communicates directly over `/dev/hidraw*` via raw HID++ 2.0 protocol (`0x8100` Onboard Profiles feature). Edits are burned straight into the mouse flash sectors and persist across computers, operating systems, and reboots.
-- **Accurate Interactive Mouse Diagram**: Real-time visual mouse canvas with click-to-edit hotspots, switch indicators, and synchronized button table.
-  - G502 Side Button Layout: B5 (Side Upper / Front), B6 (Side Middle / Rear), and B4 (Side Lower / Paddle).
 - **Automatic Game Profile Switching (Game Lock)**:
   - Automatically switches profiles when launching or focusing games (detecting Steam, Lutris, Heroic, Epic, and GOG titles).
   - Dynamic Staging (Slot 5): Instantly flashes game profiles into slot 5 on demand, allowing unlimited game profiles while keeping slots 1-4 intact.
