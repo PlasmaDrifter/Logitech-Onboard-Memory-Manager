@@ -104,7 +104,7 @@ class ProfileWatcher:
         if not wc_lower and not wt_lower:
             return None
 
-        # Strictly ignore non-game applications (browsers, editors, terminals, launchers, desktop utilities)
+        # Classify if window is a generic desktop app / browser / utility
         NON_GAME_EXACT = {
             "steam", "steamwebhelper", "lutris", "heroic", "com.heroicgameslauncher.hgl",
             "epicgameslauncher", "gog-galaxy", "itch",
@@ -112,27 +112,33 @@ class ProfileWatcher:
             "logitech-onboard-gui"
         }
         NON_GAME_SUBSTRINGS = {
-            "chrome", "firefox", "chromium", "brave", "edge", "opera", "vivaldi",
+            "chrome", "firefox", "chromium", "brave", "edge", "opera", "vivaldi", "zen",
             "antigravity", "code", "cursor", "vscodium", "sublime",
             "gedit", "kate", "kwrite", "konsole", "terminal", "alacritty",
             "kitty", "foot", "wezterm", "ptyxis", "xterm",
             "dolphin", "nautilus", "thunar", "nemo", "pcmanfm"
         }
+        is_non_game_app = False
         if not wc_lower.startswith("steam_app_"):
-            if wc_lower in NON_GAME_EXACT:
-                return None
-            for sub in NON_GAME_SUBSTRINGS:
-                if sub in wc_lower:
-                    return None
+            if wc_lower in NON_GAME_EXACT or any(sub in wc_lower for sub in NON_GAME_SUBSTRINGS):
+                is_non_game_app = True
 
         for rule in self.rules:
             if not rule.enabled:
                 continue
             p = rule.pattern.lower().strip()
-            # Match strictly against the rule pattern in the window class or window title
-            if p:
-                if p in wc_lower or p in wt_lower:
-                    return rule
+            if not p:
+                continue
+
+            # 1. Exact or substring match on window class always takes precedence (allows adding Chrome, Kate, etc.)
+            if p in wc_lower:
+                return rule
+
+            # 2. Window title matching is allowed only for actual games, never for browsers/editors/utilities
+            if not is_non_game_app and p in wt_lower:
+                return rule
+
+        return None
 
     @staticmethod
     def _get_battery_status() -> Optional[str]:
