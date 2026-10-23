@@ -1,8 +1,6 @@
 # Logitech Onboard Memory Manager (Linux)
 
-A native Linux GUI application designed to inspect, edit, and write button assignments, DPI stages, and profiles directly into the onboard flash memory of Logitech gaming mice (such as the Logitech G502 X PLUS, G502 LIGHTSPEED, HERO, and other HID++ 2.0 compatible hardware).
-
-No Windows installation or Logitech G HUB required.
+A native Linux GUI and full **Logitech G HUB replacement** for Logitech gaming mice. Program button bindings, shortcuts, DPI stages, and hardware lighting directly into onboard flash memory without Windows or proprietary bloatware. Includes automatic per-game profile switching, dynamic hardware staging, an integrated game library scanner, and an optional background service to keep profiles synchronized when the app is closed.
 
 ![Profile Editor View](assets/screenshot.png)
 
