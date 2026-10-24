@@ -40,6 +40,23 @@ A native Onboard Memory Manager and full **Logitech G HUB replacement** for gami
 
 ---
 
+## Supported Mice
+
+OMM automatically detects your connected mouse model, dynamically adapts its interactive canvas visualizer to the physical shell layout, and sets up the correct button mappings:
+
+| Model Family | Detected Models / Series | Buttons | Chassis Layout |
+| :--- | :--- | :--- | :--- |
+| **G502 Family** | G502 HERO, G502 LIGHTSPEED, G502 X, G502 X PLUS, Proteus Spectrum | 11 buttons | Asymmetric ergonomic right-handed shell with thumb wing, sniper button, and dual index buttons |
+| **G PRO Family** | PRO Wireless, PRO X Superlight, PRO X Superlight 2 | 5 buttons | Symmetrical lightweight shell with dual thumb side buttons |
+| **G305 / G203 Family** | G305 LIGHTSPEED, G203 LIGHTSYNC, G102 Prodigy | 6 buttons | Compact symmetrical shell with top DPI cycle button |
+| **G703 / G403 / G603** | G703 LIGHTSPEED, G403 HERO, G603 Wireless | 6 buttons | Ergonomic right-handed curved body with dual side buttons and top DPI button |
+| **G903 / G900** | G903 LIGHTSPEED, G900 Chaos Spectrum | 11 buttons | Symmetrical ambidextrous shell with modular left & right side buttons and dual top buttons |
+| **G604** | G604 LIGHTSPEED | 15 buttons | Multi-button MMO layout with 6-button thumb cluster and dual top buttons |
+
+*Note: Any other Logitech gaming mouse implementing the standard HID++ 2.0 / 4.5 Onboard Memory protocol (`0x8100`) is supported, with OMM automatically selecting the matching button template based on physical button count.*
+
+---
+
 ## Download & Installation
 
 ### Option 1: AppImage (Recommended)
