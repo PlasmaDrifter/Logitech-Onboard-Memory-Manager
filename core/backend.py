@@ -197,8 +197,8 @@ class MouseBackend:
 
             profiles_yaml = {}
             for pid, prof in config.profiles.items():
-                raw_b = MouseBackend._translate_ui_to_raw_buttons(prof.buttons)
-                raw_gb = MouseBackend._translate_ui_to_raw_buttons(prof.gbuttons)
+                raw_b = self._translate_ui_to_raw_buttons(prof.buttons)
+                raw_gb = self._translate_ui_to_raw_buttons(prof.gbuttons)
                 p_yaml = OnboardProfileYaml(
                     angle_snap=getattr(prof, "angle_snap", 0),
                     blue=getattr(prof, "blue", 255),
@@ -239,28 +239,32 @@ class MouseBackend:
         except Exception:
             return None
 
-    @staticmethod
-    def _translate_raw_to_ui_buttons(raw_btns: list) -> list:
+    def _is_g502_model(self, model_key: str | None = None) -> bool:
+        if model_key:
+            return model_key == "g502"
+        from .keycodes import detect_mouse_model
+
+        return detect_mouse_model(self.device_name) == "g502"
+
+    def _translate_raw_to_ui_buttons(
+        self, raw_btns: list, model_key: str | None = None
+    ) -> list:
         """Translates raw G502 hardware memory chunk order to logical UI button order.
-        In G502 hardware flash:
-          chunk 3 = G4 (Back)
-          chunk 4 = G6 (DPI Shift / Sniper)
-          chunk 5 = G5 (Forward)
-        In the UI / logical button numbering:
-          button 4 (idx 3) = G4 (Thumb Back)
-          button 5 (idx 4) = G5 (Thumb Forward)
-          button 6 (idx 5) = G6 (Thumb DPI Shift / Sniper)
+        Only applied to G502 family mice, where hardware EEPROM orders chunk 4 (Sniper / G6)
+        before chunk 5 (Forward / G5). For all other models (G-Pro, G305, G703, G903, G604),
+        hardware chunks follow natural 1:1 order.
         """
         btns = list(raw_btns)
-        if len(btns) >= 6:
+        if self._is_g502_model(model_key) and len(btns) >= 6:
             btns[4], btns[5] = btns[5], btns[4]
         return btns
 
-    @staticmethod
-    def _translate_ui_to_raw_buttons(ui_btns: list) -> list:
+    def _translate_ui_to_raw_buttons(
+        self, ui_btns: list, model_key: str | None = None
+    ) -> list:
         """Translates logical UI button order to raw G502 hardware memory chunk order."""
         btns = list(ui_btns)
-        if len(btns) >= 6:
+        if self._is_g502_model(model_key) and len(btns) >= 6:
             btns[4], btns[5] = btns[5], btns[4]
         return btns
 
@@ -682,8 +686,9 @@ class MouseBackend:
 
         return config
 
-    @staticmethod
-    def _build_profile_sector(prof: Profile, base_bytes: bytes | None = None) -> bytes:
+    def _build_profile_sector(
+        self, prof: Profile, base_bytes: bytes | None = None
+    ) -> bytes:
         import struct
 
         b = bytearray(
@@ -701,8 +706,8 @@ class MouseBackend:
         b[15] = 0
         b[16] = prof.power_mode & 0xFF
         b[17] = prof.angle_snap & 0xFF
-        raw_buttons = MouseBackend._translate_ui_to_raw_buttons(prof.buttons)
-        raw_gbuttons = MouseBackend._translate_ui_to_raw_buttons(prof.gbuttons)
+        raw_buttons = self._translate_ui_to_raw_buttons(prof.buttons)
+        raw_gbuttons = self._translate_ui_to_raw_buttons(prof.gbuttons)
         for i in range(11):
             if i < len(raw_buttons):
                 btn = raw_buttons[i]
