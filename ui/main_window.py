@@ -131,6 +131,14 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.watcher = ProfileWatcher(backend=self.backend)
         self.games_tab = GamesTab(self.watcher)
+
+        # On fresh installations (or first launch), auto-enable and start the background service
+        if not self.qsettings.value("service_initialized", False, type=bool):
+            BackgroundServiceManager.ensure_service_installed()
+            BackgroundServiceManager.set_autostart(True)
+            BackgroundServiceManager.start()
+            self.qsettings.setValue("service_initialized", True)
+
         if not BackgroundServiceManager.is_running():
             self.watcher.start()
 

@@ -60,9 +60,12 @@ if command -v gtk-update-icon-cache >/dev/null 2>&1; then
     fi
 fi
 
-# 5. Update background service unit if installed
+# 5. Setup and automatically enable/start background auto-switching service
 python3 -c "import sys; sys.path.insert(0, '${SCRIPT_DIR}'); from core.service_manager import BackgroundServiceManager; BackgroundServiceManager.ensure_service_installed()" >/dev/null 2>&1 || true
 systemctl --user daemon-reload >/dev/null 2>&1 || true
+systemctl --user enable omm-watcher.service >/dev/null 2>&1 || true
+systemctl --user restart omm-watcher.service >/dev/null 2>&1 || true
+echo "Enabled and started background auto-switching service (omm-watcher.service)."
 
 echo "Installation complete!"
 echo "You can launch it anytime by running: omm"

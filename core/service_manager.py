@@ -46,7 +46,7 @@ class BackgroundServiceManager:
                 appimage = appimage_alt
 
         if appimage.is_file() and os.access(appimage, os.X_OK):
-            exec_start = f'"{appimage}" --daemon'
+            exec_start = f'"%h/Applications/{appimage.name}" --daemon'
         else:
             exec_start = '"%h/.local/bin/omm" --daemon'
 
